@@ -1,0 +1,2378 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}</style></head><body><title>Plausi Checker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working desk — rules on the left, findings and the sheet itself on the right, like a reviewer's checklist next to the ledger. */
+:root {
+  --paper: #f3f5f8;
+  --surface: #ffffff;
+  --sunken: #eef1f5;
+  --ink: #16202c;
+  --muted: #586579;
+  --line: #d9dfe7;
+  --accent: #1f5f99;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2ecf6;
+  --err: #b42318;
+  --err-bg: #fde7e4;
+  --warn: #8a5300;
+  --warn-bg: #fff1cc;
+  --cfg: #6b3fa0;
+  --cfg-bg: #efe6f8;
+  --ok: #1d7a46;
+  --ok-bg: #e2f4ea;
+  --focus: #f4b400;
+  --f-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f141b; --surface: #161d27; --sunken: #1c2531; --ink: #e5eaf1; --muted: #9aa7b8; --line: #2a3544;
+    --accent: #6aa6e0; --accent-ink: #0b1220; --accent-soft: #1b2e44;
+    --err: #ff8a7a; --err-bg: #3a1b18; --warn: #f2c04d; --warn-bg: #352a10; --cfg: #c9a3f0; --cfg-bg: #2c2140;
+    --ok: #6fd39b; --ok-bg: #163324; --focus: #f4b400; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f141b; --surface: #161d27; --sunken: #1c2531; --ink: #e5eaf1; --muted: #9aa7b8; --line: #2a3544;
+  --accent: #6aa6e0; --accent-ink: #0b1220; --accent-soft: #1b2e44;
+  --err: #ff8a7a; --err-bg: #3a1b18; --warn: #f2c04d; --warn-bg: #352a10; --cfg: #c9a3f0; --cfg-bg: #2c2140;
+  --ok: #6fd39b; --ok-bg: #163324; --focus: #f4b400; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--f-ui); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-size: 0.86em; }
+.muted { color: var(--muted); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+/* top bar */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-size: 14px; }
+.file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.file .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
+.badge { font: 500 11px/1 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 7px; border-radius: 4px; background: var(--sunken); color: var(--muted); border: 1px solid var(--line); }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 8px 14px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+.note { margin-top: 16px; border: 1px dashed var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; color: var(--muted); font-size: 14px; background: var(--surface); }
+.note b { color: var(--ink); }
+.formats { display: flex; flex-wrap: wrap; gap: 4px; }
+.formats span { font: 500 11px/1 var(--f-mono); padding: 4px 6px; border-radius: 4px; background: var(--sunken); color: var(--muted); }
+.note.sample { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.note.problem { border-style: solid; border-color: var(--err); background: var(--err-bg); color: var(--ink); }
+
+/* drag overlay */
+.dropzone { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--paper) 86%, transparent); border: 3px dashed var(--accent); font-size: 20px; font-weight: 600; }
+
+/* layout */
+.layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; padding-block: 20px 40px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } .results { order: -1; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.panel > header h2 { font-size: 16px; font-weight: 600; }
+.panel .body { padding: 14px 16px; display: grid; gap: 14px; }
+.eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; }
+select, input[type=text], input[type=number], textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--surface); }
+textarea { min-height: 70px; resize: vertical; }
+.hint { font-size: 13px; color: var(--muted); }
+.examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.examples button { border: 1px solid var(--line); background: var(--sunken); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
+.examples button:hover { border-color: var(--accent); }
+.status { font-size: 13px; padding: 8px 10px; border-radius: 6px; }
+.status.ok { background: var(--ok-bg); color: var(--ok); }
+.status.bad { background: var(--err-bg); color: var(--err); }
+.toggle { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+details.builder { border-top: 1px solid var(--line); padding-top: 12px; }
+details.builder summary { cursor: pointer; font-weight: 500; font-size: 14px; }
+details.builder .grid { display: grid; gap: 10px; margin-top: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+details.builder .grid .wide { grid-column: 1 / -1; }
+
+.rules { list-style: none; margin: 0; padding: 0; display: grid; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.rule:first-child { border-top: 0; }
+.rule .what { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; min-width: 0; }
+.rule .col { font-weight: 600; overflow-wrap: anywhere; }
+.chip { font: 500 11.5px/1.2 var(--f-mono); padding: 3px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.rule .param { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.rule .desc { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.rule.off { opacity: .5; }
+.rule .acts { display: flex; gap: 4px; align-items: start; }
+.icon-btn { border: 1px solid transparent; background: none; border-radius: 6px; padding: 3px 6px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.icon-btn:hover { border-color: var(--line); color: var(--ink); }
+.sev { font: 600 11px/1 var(--f-ui); letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 4px 6px; border: 0; cursor: pointer; }
+.sev.error { background: var(--err-bg); color: var(--err); }
+.sev.warning { background: var(--warn-bg); color: var(--warn); }
+.empty-rules { color: var(--muted); font-size: 14px; padding-top: 6px; }
+.list-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.sugg { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: var(--ok-bg); border-radius: 4px; padding: 2px 6px; }
+
+/* summary */
+.results { display: grid; gap: 20px; min-width: 0; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-top: 3px solid var(--line); }
+.tile b { display: block; font-size: 28px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 13px; color: var(--muted); }
+.tile.e { border-top-color: var(--err); } .tile.e b { color: var(--err); }
+.tile.w { border-top-color: var(--warn); } .tile.w b { color: var(--warn); }
+.tile.c { border-top-color: var(--cfg); } .tile.c b { color: var(--cfg); }
+.tile.ok { border-top-color: var(--ok); } .tile.ok b { color: var(--ok); }
+
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.dl { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.issues { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow: auto; }
+.issue { display: grid; grid-template-columns: 6px 88px minmax(0, 1fr); gap: 0 12px; padding: 10px 16px 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.issue:hover, .issue:focus-visible { background: var(--sunken); }
+.issue .stripe { background: var(--err); border-radius: 0 3px 3px 0; }
+.issue.warning .stripe { background: var(--warn); }
+.issue.config .stripe { background: var(--cfg); }
+.issue .ref { font: 500 13px/1.4 var(--f-mono); color: var(--accent); overflow-wrap: anywhere; }
+.issue .ref small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.issue .msg { font-weight: 500; }
+.issue .meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.issue .val { font-family: var(--f-mono); font-size: 12px; background: var(--sunken); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; color: var(--ink); }
+.more { padding: 12px 16px; }
+.clean { padding: 28px 16px; text-align: center; color: var(--ok); font-weight: 600; }
+
+/* sheet preview */
+.preview-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { border: 1px solid var(--line); border-bottom-width: 3px; background: var(--surface); padding: 5px 12px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13px; }
+.tabs button[aria-selected="true"] { border-bottom-color: var(--accent); font-weight: 600; }
+.tabs .cnt { font-variant-numeric: tabular-nums; color: var(--err); margin-left: 4px; font-weight: 600; }
+.grid-wrap { overflow: auto; max-height: 520px; }
+table.sheet { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.sheet th, table.sheet td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 8px; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+table.sheet thead th { position: sticky; top: 0; z-index: 2; background: var(--sunken); font: 500 11px/1.4 var(--f-mono); color: var(--muted); text-align: center; }
+table.sheet tbody th { position: sticky; left: 0; z-index: 1; background: var(--sunken); font: 500 11px/1.4 var(--f-mono); color: var(--muted); text-align: right; min-width: 44px; }
+table.sheet tr.hdr td { font-weight: 600; background: var(--accent-soft); }
+table.sheet td.num { text-align: right; }
+table.sheet tr.tot td { font-weight: 600; background: var(--sunken); border-top: 2px solid var(--muted); }
+table.sheet tr.note-row td { color: var(--muted); font-style: italic; }
+table.sheet td.e { background: var(--err-bg); color: var(--err); box-shadow: inset 0 0 0 1px var(--err); }
+table.sheet td.w { background: var(--warn-bg); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn); }
+table.sheet td.flash { outline: 3px solid var(--focus); outline-offset: -3px; }
+.preview-foot { padding: 10px 16px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+footer.foot { padding-block: 0 32px; color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { table.sheet td.flash { transition: outline-color .6s; } }
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Plausi<span>.</span></h1>
+      <p>Business-rule checks for Excel and CSV files</p>
+    </div>
+    <div class="file">
+      <span class="badge" id="fileFormat">XLSX</span>
+      <span class="name" id="fileName">Sample payouts</span>
+    </div>
+    <label class="btn primary" for="fileInput">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg>
+      Open file
+    </label>
+    <input type="file" id="fileInput" hidden accept=".xlsx,.xlsm,.xlsb,.xls,.xltx,.xltm,.xlt,.ods,.fods,.csv,.tsv,.txt">
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="note" id="banner"></div>
+
+  <div class="layout">
+    <!-- Rules -->
+    <section class="panel" aria-labelledby="rulesTitle">
+      <header><h2 id="rulesTitle">Rules</h2><span class="muted" id="ruleCount"></span></header>
+      <div class="body">
+        <div class="row2">
+          <div class="field">
+            <label for="sheetSelect">Sheet</label>
+            <select id="sheetSelect"></select>
+          </div>
+          <div class="field">
+            <label for="headerRow">Header row</label>
+            <input type="number" id="headerRow" min="1" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ruleText">Describe a rule</label>
+          <textarea id="ruleText" placeholder="IBAN must be valid"></textarea>
+          <div class="examples" id="examples"></div>
+          <label class="toggle" id="claudeToggle" hidden><input type="checkbox" id="useClaude" checked> Let Claude read it (sends the sentence and column names, never cell values)</label>
+          <button class="btn primary" id="addRule" type="button">Add rule</button>
+          <div class="status" id="ruleStatus" hidden></div>
+        </div>
+
+        <details class="builder">
+          <summary>Build a rule by hand</summary>
+          <div class="grid">
+            <div class="field"><label for="bColumn">Column</label><select id="bColumn"></select></div>
+            <div class="field"><label for="bCheck">Check</label><select id="bCheck"></select></div>
+            <div class="field wide"><label for="bParam">Parameter</label><input type="text" id="bParam"><span class="hint" id="bHelp"></span></div>
+            <div class="field"><label for="bSeverity">Severity</label><select id="bSeverity"><option value="error">Error</option><option value="warning">Warning</option></select></div>
+            <div class="field" style="align-self:end"><button class="btn" id="bAdd" type="button">Add</button></div>
+          </div>
+        </details>
+
+        <div>
+          <div class="list-head"><span class="eyebrow">Active on this sheet</span><button class="btn small" id="suggestBtn" type="button">Suggest rules from my data</button></div>
+          <ul class="rules" id="ruleList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <div class="results">
+      <div class="summary" id="summary"></div>
+
+      <section class="panel" aria-labelledby="findingsTitle">
+        <div class="bar">
+          <h2 id="findingsTitle" style="font-size:16px;font-weight:600">Findings</h2>
+          <div class="filters" id="filters"></div>
+        </div>
+        <ul class="issues" id="issues"></ul>
+        <div class="bar" style="border-bottom:0;border-top:1px solid var(--line)">
+          <span class="hint" id="dlHint">Download a copy with problem cells colored, plus a report and your rules.</span>
+          <div class="dl">
+            <button class="btn" id="dlCsv" type="button">Report (.csv)</button>
+            <button class="btn primary" id="dlXlsx" type="button">Marked-up workbook (.xlsx)</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="previewTitle">
+        <div class="preview-head">
+          <h2 id="previewTitle" style="font-size:16px;font-weight:600">Sheet</h2>
+          <div class="tabs" id="tabs" role="tablist"></div>
+        </div>
+        <div class="grid-wrap" id="gridWrap"></div>
+        <div class="preview-foot" id="previewFoot"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="foot">Files are read in your browser and never uploaded. Works with .xlsx, .xlsm, .xlsb, .xls (Excel 97–2003), .ods and CSV/TSV. Rules travel with the downloaded workbook in a “Plausi Rules” sheet, the same format the Google Sheets add-on uses.</footer>
+</div>
+
+<div class="dropzone" id="dropzone" hidden>Drop your Excel or CSV file to check it</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/**
+ * Plausi — rule engine.
+ *
+ * Pure JavaScript with no Apps Script services, so the same file runs inside
+ * Google Sheets (Apps Script V8) and in Node for tests.
+ *
+ * A rule is a plain object:
+ *   { sheet, column, check, param, severity: 'error' | 'warning', description }
+ * A table is:
+ *   { sheetName, headers: [...], rows: [[...], ...], firstDataRow: 2 }
+ */
+var PlausiEngine = (function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Check catalogue (also used for the sidebar help and the Claude prompt)
+  // ---------------------------------------------------------------------------
+  var CHECKS = {
+    required:        { scope: 'cell',   param: '', help: 'Cell must not be empty.' },
+    number:          { scope: 'cell',   param: '', help: 'Must be a real number. Flags numbers stored as text such as "1.250,00".' },
+    range:           { scope: 'cell',   param: 'min..max, e.g. 0..5, 0.. or ..1000', help: 'Number must lie within the range (inclusive).' },
+    decimals:        { scope: 'cell',   param: 'max decimal places, e.g. 2', help: 'Number may have at most N decimal places.' },
+    date:            { scope: 'cell',   param: '', help: 'Must be a valid date (date cell, YYYY-MM-DD or DD.MM.YYYY).' },
+    not_future:      { scope: 'cell',   param: '', help: 'Date must not be in the future.' },
+    compare:         { scope: 'cell',   param: 'operator and column, e.g. >= Start date', help: 'Compare with another column in the same row (>, >=, <, <=, =, !=).' },
+    allowed:         { scope: 'cell',   param: 'comma-separated list, e.g. EUR, USD', help: 'Value must be one of the listed values (case-insensitive).' },
+    regex:           { scope: 'cell',   param: 'regular expression, e.g. ^P-\\d{4}$', help: 'Value must match the pattern.' },
+    length:          { scope: 'cell',   param: 'exact or min..max, e.g. 11 or 8..11', help: 'Text length must match.' },
+    email:           { scope: 'cell',   param: '', help: 'Must look like an e-mail address.' },
+    iban:            { scope: 'cell',   param: '', help: 'Valid IBAN: country length and checksum (catches typos).' },
+    bic:             { scope: 'cell',   param: '', help: 'Valid BIC/SWIFT format.' },
+    unique:          { scope: 'column', param: 'optional extra columns, e.g. Date, Currency', help: 'No duplicates, optionally for a combination of columns.' },
+    fuzzy_duplicate: { scope: 'column', param: '', help: 'Near-duplicates, e.g. "Müller & Söhne GmbH" vs "Mueller und Soehne".' },
+    sum_equals:      { scope: 'column', param: 'number or cell, e.g. 12500 or Bank!B2', help: 'Column total must equal a target (reconciliation).' },
+    freshness:       { scope: 'column', param: 'days, e.g. 7', help: 'Newest date in the column must be at most N days old.' },
+    min_rows:        { scope: 'table',  param: 'number, e.g. 10', help: 'Sheet must have at least N data rows. No column needed.' },
+    no_extra_spaces: { scope: 'cell',   param: '', help: 'No leading, trailing or double spaces (they break lookups and matching).' },
+    outlier:         { scope: 'column', param: 'sensitivity, e.g. 3 (higher = fewer flags)', help: 'Numbers far outside the usual range of the column (interquartile rule).' }
+  };
+
+  function checkNames() { return Object.keys(CHECKS); }
+
+  function checkList() {
+    return Object.keys(CHECKS).map(function (k) {
+      return { name: k, scope: CHECKS[k].scope, param: CHECKS[k].param, help: CHECKS[k].help };
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Value helpers
+  // ---------------------------------------------------------------------------
+  function isDate(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
+
+  function isBlank(v) {
+    return v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+  }
+
+  /** Parses numbers, including German-formatted text like "1.250,00". */
+  function toNumber(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : NaN;
+    if (v === null || v === undefined || typeof v === 'boolean' || isDate(v)) return NaN;
+    var s = String(v).trim().replace(/[\s€$£%]/g, '');
+    if (s === '') return NaN;
+    var lastDot = s.lastIndexOf('.');
+    var lastComma = s.lastIndexOf(',');
+    if (lastDot > -1 && lastComma > -1) {
+      s = lastComma > lastDot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    } else if (lastComma > -1) {
+      s = (s.match(/,/g) || []).length === 1 ? s.replace(',', '.') : s.replace(/,/g, '');
+    }
+    if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) return NaN;
+    return parseFloat(s);
+  }
+
+  /** Accepts Date objects, YYYY-MM-DD[ hh:mm[:ss]] and DD.MM.YYYY / DD/MM/YYYY. */
+  function toDate(v) {
+    if (isDate(v)) return isNaN(v.getTime()) ? null : v;
+    if (typeof v !== 'string') return null;
+    var s = v.trim();
+    var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (m) return makeDate(+m[1], +m[2], +m[3], m[4], m[5], m[6]);
+    m = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (m) return makeDate(+m[3], +m[2], +m[1], m[4], m[5], m[6]);
+    return null;
+  }
+
+  function makeDate(y, mo, d, h, mi, se) {
+    var dt = new Date(y, mo - 1, d, +(h || 0), +(mi || 0), +(se || 0));
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt;
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function display(v) {
+    if (isDate(v)) return v.getFullYear() + '-' + pad(v.getMonth() + 1) + '-' + pad(v.getDate());
+    if (v === null || v === undefined) return '';
+    return String(v);
+  }
+
+  function fmtNum(n) { return String(Math.round(n * 100) / 100); }
+
+  // ---------------------------------------------------------------------------
+  // Identifier validation
+  // ---------------------------------------------------------------------------
+  var IBAN_LENGTHS = {
+    AD: 24, AT: 20, BE: 16, BG: 22, CH: 21, CY: 28, CZ: 24, DE: 22, DK: 18, EE: 20,
+    ES: 24, FI: 18, FR: 27, GB: 22, GI: 23, GR: 27, HR: 21, HU: 28, IE: 22, IS: 26,
+    IT: 27, LI: 21, LT: 20, LU: 20, LV: 21, MC: 27, MT: 31, NL: 18, NO: 15, PL: 28,
+    PT: 25, RO: 24, SE: 24, SI: 19, SK: 24, SM: 27
+  };
+
+  function mod97(str) {
+    var rem = 0;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charAt(i);
+      var code = /[0-9]/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
+      for (var j = 0; j < code.length; j++) rem = (rem * 10 + (+code.charAt(j))) % 97;
+    }
+    return rem;
+  }
+
+  function ibanProblem(v) {
+    var s = String(v).replace(/\s+/g, '').toUpperCase();
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/.test(s)) return 'Not in IBAN format';
+    var expected = IBAN_LENGTHS[s.slice(0, 2)];
+    if (expected && s.length !== expected) {
+      return s.slice(0, 2) + ' IBANs have ' + expected + ' characters, this one has ' + s.length;
+    }
+    if (mod97(s.slice(4) + s.slice(0, 4)) !== 1) return 'IBAN checksum is wrong (probably a typo)';
+    return null;
+  }
+
+  /** Builds a valid IBAN from a country code and BBAN (used for demo data). */
+  function makeIban(country, bban) {
+    var check = 98 - mod97(bban + country + '00');
+    return country + pad(check) + bban;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fuzzy normalisation for near-duplicate names
+  // ---------------------------------------------------------------------------
+  var STOP_WORDS = ['gmbh', 'ag', 'kg', 'ug', 'ohg', 'gbr', 'mbh', 'co', 'ltd', 'limited', 'inc',
+    'llc', 'plc', 'se', 'sa', 'sarl', 'bv', 'haftungsbeschrankt', 'und', 'and', 'the'];
+
+  function fuzzyKey(v) {
+    var s = String(v).toLowerCase()
+      .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+    if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var tokens = s.replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(function (t) {
+      return t && STOP_WORDS.indexOf(t) === -1;
+    });
+    tokens.sort();
+    return tokens.join(' ');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parameter parsing
+  // ---------------------------------------------------------------------------
+  function ConfigError(msg) { this.message = msg; this.isConfig = true; }
+
+  function parseRange(p, what) {
+    var m = String(p).trim().match(/^(-?[\d.,]*)\s*\.\.\s*(-?[\d.,]*)$/);
+    if (!m || (m[1] === '' && m[2] === '')) throw new ConfigError(what + ' must look like 0..5, 0.. or ..5');
+    var min = m[1] === '' ? null : toNumber(m[1]);
+    var max = m[2] === '' ? null : toNumber(m[2]);
+    if ((min !== null && isNaN(min)) || (max !== null && isNaN(max))) throw new ConfigError(what + ' contains something that is not a number');
+    return { min: min, max: max };
+  }
+
+  function parsePositiveInt(p, what) {
+    var n = parseInt(String(p).trim(), 10);
+    if (isNaN(n) || n < 0) throw new ConfigError(what + ' must be a whole number');
+    return n;
+  }
+
+  function lookupColumn(headerIdx, name) {
+    var key = String(name).trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(headerIdx, key) ? headerIdx[key] : -1;
+  }
+
+  function comparable(v) {
+    var d = toDate(v);
+    if (d) return { type: 'date', v: d.getTime() };
+    var n = toNumber(v);
+    if (!isNaN(n)) return { type: 'number', v: n };
+    return { type: 'text', v: String(v).trim().toLowerCase() };
+  }
+
+  var OPS = {
+    '>':  function (a, b) { return a > b; },
+    '>=': function (a, b) { return a >= b; },
+    '<':  function (a, b) { return a < b; },
+    '<=': function (a, b) { return a <= b; },
+    '=':  function (a, b) { return a === b; },
+    '!=': function (a, b) { return a !== b; }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Cell checks: return a function(value, rowArray) -> message | null
+  // ---------------------------------------------------------------------------
+  function buildCellTest(rule, headerIdx, now, opts) {
+    opts = opts || {};
+    var p = rule.param === undefined || rule.param === null ? '' : String(rule.param).trim();
+    switch (rule.check) {
+      case 'required':
+        return function (v) { return isBlank(v) ? 'Missing value' : null; };
+
+      case 'number':
+        return function (v) {
+          if (typeof v === 'number') return null;
+          if (isNaN(toNumber(v))) return 'Not a number';
+          return opts.textInput ? null : 'Number stored as text';   // CSV cells are always text
+        };
+
+      case 'range': {
+        var r = parseRange(p, 'Range');
+        return function (v) {
+          var n = toNumber(v);
+          if (isNaN(n)) return 'Not a number, so the range cannot be checked';
+          if (r.min !== null && n < r.min) return 'Below the minimum of ' + r.min;
+          if (r.max !== null && n > r.max) return 'Above the maximum of ' + r.max;
+          return null;
+        };
+      }
+
+      case 'decimals': {
+        var places = parsePositiveInt(p, 'Decimals');
+        var f = Math.pow(10, places);
+        return function (v) {
+          var n = toNumber(v);
+          if (isNaN(n)) return 'Not a number';
+          return Math.abs(n * f - Math.round(n * f)) > 1e-6 ? 'More than ' + places + ' decimal places' : null;
+        };
+      }
+
+      case 'date':
+        return function (v) { return toDate(v) ? null : 'Not a valid date'; };
+
+      case 'not_future': {
+        var endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        return function (v) {
+          var d = toDate(v);
+          if (!d) return 'Not a valid date';
+          return d > endOfToday ? 'Date is in the future' : null;
+        };
+      }
+
+      case 'compare': {
+        var m = p.match(/^(>=|<=|!=|==|=|>|<)\s*(.+)$/);
+        if (!m) throw new ConfigError('Compare needs an operator and a column, e.g. ">= Start date"');
+        var op = m[1] === '==' ? '=' : m[1];
+        var otherName = m[2].trim();
+        var otherIdx = lookupColumn(headerIdx, otherName);
+        if (otherIdx < 0) throw new ConfigError('Column "' + otherName + '" not found');
+        return function (v, row) {
+          var o = row[otherIdx];
+          if (isBlank(o)) return null;
+          var a = comparable(v), b = comparable(o);
+          if (a.type !== b.type) return 'Cannot compare with ' + otherName + ' ("' + display(o) + '")';
+          return OPS[op](a.v, b.v) ? null : 'Should be ' + op + ' ' + otherName + ' (' + display(o) + ')';
+        };
+      }
+
+      case 'allowed': {
+        var list = p.split(/[,;|]/).map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!list.length) throw new ConfigError('List the allowed values, e.g. "EUR, USD"');
+        var lower = list.map(function (s) { return s.toLowerCase(); });
+        var listNums = list.map(function (s) { return /^-?[\d.,]+$/.test(s) ? toNumber(s) : NaN; });
+        return function (v) {
+          if (lower.indexOf(display(v).trim().toLowerCase()) > -1) return null;
+          var x = typeof v === 'number' ? v : (/^\s*-?[\d.,]+\s*$/.test(String(v)) ? toNumber(v) : NaN);
+          if (!isNaN(x) && listNums.some(function (y) { return !isNaN(y) && Math.abs(x - y) < 1e-9; })) return null;
+          return 'Not an allowed value (allowed: ' + list.join(', ') + ')';
+        };
+      }
+
+      case 'regex': {
+        var re;
+        try { re = new RegExp(p); } catch (e) { throw new ConfigError('Invalid pattern: ' + e.message); }
+        return function (v) { return re.test(display(v)) ? null : 'Does not match the expected pattern'; };
+      }
+
+      case 'length': {
+        var lr = /\.\./.test(p) ? parseRange(p, 'Length') : (function () {
+          var n = parsePositiveInt(p, 'Length');
+          return { min: n, max: n };
+        })();
+        return function (v) {
+          var len = display(v).trim().length;
+          if (lr.min !== null && len < lr.min) return 'Too short (' + len + ' characters, expected ' + (lr.min === lr.max ? lr.min : 'at least ' + lr.min) + ')';
+          if (lr.max !== null && len > lr.max) return 'Too long (' + len + ' characters, expected ' + (lr.min === lr.max ? lr.max : 'at most ' + lr.max) + ')';
+          return null;
+        };
+      }
+
+      case 'email':
+        return function (v) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@.]{2,}$/.test(display(v).trim()) ? null : 'Not a valid e-mail address';
+        };
+
+      case 'iban':
+        return function (v) { return ibanProblem(v); };
+
+      case 'no_extra_spaces':
+        return function (v) {
+          if (typeof v !== 'string') return null;
+          if (/^\s|\s$/.test(v)) return 'Leading or trailing space';
+          if (/\S\s{2,}\S/.test(v)) return 'Double space inside the value';
+          return null;
+        };
+
+      case 'bic':
+        return function (v) {
+          return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(display(v).replace(/\s+/g, '').toUpperCase()) ? null : 'Not a valid BIC';
+        };
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Running rules
+  // ---------------------------------------------------------------------------
+  function describe(rule) {
+    if (rule.description) return rule.description;
+    return [rule.column, rule.check, rule.param].filter(function (x) { return x !== undefined && x !== null && String(x) !== ''; }).join(' ');
+  }
+
+  function configIssue(rule, message) {
+    return {
+      sheet: rule.sheet || '', row: null, column: rule.column || '', colIndex: -1, value: '',
+      check: rule.check, severity: 'config', message: 'Rule problem: ' + message, rule: describe(rule)
+    };
+  }
+
+  function issue(rule, row, colIdx, value, message) {
+    return {
+      sheet: rule.sheet || '', row: row, column: rule.column || '', colIndex: colIdx, value: value,
+      check: rule.check, severity: rule.severity === 'warning' ? 'warning' : 'error',
+      message: message, rule: describe(rule)
+    };
+  }
+
+  /** opts: { now: Date, textInput: true when every cell is text (CSV) } */
+  function runRules(table, rules, opts) {
+    opts = opts || {};
+    var now = opts.now || new Date();
+    var first = table.firstDataRow || 2;
+    var headers = table.headers || [];
+    var rows = table.rows || [];
+
+    var headerIdx = {};
+    headers.forEach(function (h, i) {
+      var k = String(h).trim().toLowerCase();
+      if (k && !Object.prototype.hasOwnProperty.call(headerIdx, k)) headerIdx[k] = i;
+    });
+
+    var dataRows = [];
+    rows.forEach(function (r, i) {
+      if (r.some(function (v) { return !isBlank(v); })) dataRows.push(i);
+    });
+
+    var issues = [];
+
+    rules.forEach(function (rawRule) {
+      var rule = {};
+      for (var k in rawRule) rule[k] = rawRule[k];
+      rule.sheet = rule.sheet || table.sheetName || '';
+      rule.check = String(rule.check || '').trim().toLowerCase();
+      rule.severity = String(rule.severity || 'error').trim().toLowerCase();
+      try {
+        var def = CHECKS[rule.check];
+        if (!def) throw new ConfigError('Unknown check "' + rule.check + '"');
+        var colIdx = -1;
+        if (def.scope !== 'table') {
+          if (isBlank(rule.column)) throw new ConfigError('No column given');
+          colIdx = lookupColumn(headerIdx, rule.column);
+          if (colIdx < 0) throw new ConfigError('Column "' + rule.column + '" not found in sheet "' + rule.sheet + '"');
+          rule.column = String(headers[colIdx]).trim();
+        }
+
+        if (def.scope === 'cell') {
+          var test = buildCellTest(rule, headerIdx, now, opts);
+          dataRows.forEach(function (i) {
+            var v = rows[i][colIdx];
+            if (rule.check !== 'required' && isBlank(v)) return;
+            var msg = test(v, rows[i]);
+            if (msg) issues.push(issue(rule, first + i, colIdx, v, msg));
+          });
+        } else {
+          runColumnRule(rule, colIdx, rows, dataRows, headerIdx, first, now, issues);
+        }
+      } catch (e) {
+        if (e && e.isConfig) issues.push(configIssue(rule, e.message));
+        else throw e;
+      }
+    });
+
+    issues.sort(sortIssues);
+    return { issues: issues, stats: statsFor(issues, rules.length, dataRows.length) };
+  }
+
+  function runColumnRule(rule, colIdx, rows, dataRows, headerIdx, first, now, issues) {
+    var p = rule.param === undefined || rule.param === null ? '' : String(rule.param).trim();
+    switch (rule.check) {
+      case 'unique': {
+        var cols = [colIdx];
+        var extra = p ? p.split(/[,;]/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
+        extra.forEach(function (name) {
+          var ix = lookupColumn(headerIdx, name);
+          if (ix < 0) throw new ConfigError('Column "' + name + '" not found');
+          cols.push(ix);
+        });
+        var seen = {};
+        dataRows.forEach(function (i) {
+          var parts = cols.map(function (c) {
+            var v = rows[i][c];
+            if (isDate(v)) return 'd' + v.getTime();
+            return isBlank(v) ? '' : String(v).trim().toLowerCase();
+          });
+          if (parts.every(function (x) { return x === ''; })) return;
+          var key = parts.join('\u241f');
+          if (Object.prototype.hasOwnProperty.call(seen, key)) {
+            issues.push(issue(rule, first + i, colIdx, rows[i][colIdx], 'Duplicate of row ' + seen[key]));
+          } else {
+            seen[key] = first + i;
+          }
+        });
+        return;
+      }
+
+      case 'fuzzy_duplicate': {
+        // Group values that normalise to the same key; within a group the most
+        // common exact spelling is "right" and every other spelling is flagged.
+        // Exact repeats (the same customer on many rows) are not flagged.
+        var groups = {};
+        dataRows.forEach(function (i) {
+          var v = rows[i][colIdx];
+          if (isBlank(v)) return;
+          var key = fuzzyKey(v);
+          if (!key) return;
+          var exact = display(v).trim().replace(/\s+/g, ' ');
+          var g = groups[key] || (groups[key] = { order: [], variants: {} });
+          if (!g.variants[exact]) { g.variants[exact] = { count: 0, firstRow: first + i, rows: [] }; g.order.push(exact); }
+          g.variants[exact].count++;
+          g.variants[exact].rows.push({ row: first + i, value: v });
+        });
+        Object.keys(groups).forEach(function (key) {
+          var g = groups[key];
+          if (g.order.length < 2) return;
+          var main = g.order.reduce(function (best, x) { return g.variants[x].count > g.variants[best].count ? x : best; }, g.order[0]);
+          g.order.forEach(function (x) {
+            if (x === main) return;
+            g.variants[x].rows.forEach(function (r) {
+              issues.push(issue(rule, r.row, colIdx, r.value, 'Looks like the same as row ' + g.variants[main].firstRow + ' ("' + main + '")'));
+            });
+          });
+        });
+        return;
+      }
+
+      case 'sum_equals': {
+        var targetRaw = rule.resolvedParam !== undefined && rule.resolvedParam !== null ? rule.resolvedParam : p;
+        var target = toNumber(targetRaw);
+        if (isNaN(target)) throw new ConfigError('Target "' + p + '" is not a number or a readable cell');
+        var sum = 0, skipped = 0;
+        dataRows.forEach(function (i) {
+          var v = rows[i][colIdx];
+          if (isBlank(v)) return;
+          var n = toNumber(v);
+          if (isNaN(n)) skipped++; else sum += n;
+        });
+        var diff = sum - target;
+        if (Math.abs(diff) > 0.005) {
+          issues.push(issue(rule, null, colIdx, fmtNum(sum),
+            'Column total ' + fmtNum(sum) + ' does not match target ' + fmtNum(target) +
+            ' (difference ' + (diff > 0 ? '+' : '') + fmtNum(diff) + ')' +
+            (skipped ? '; ' + skipped + ' non-numeric cell(s) ignored' : '')));
+        }
+        return;
+      }
+
+      case 'freshness': {
+        var days = parsePositiveInt(p, 'Freshness');
+        var newest = null;
+        dataRows.forEach(function (i) {
+          var d = toDate(rows[i][colIdx]);
+          if (d && (!newest || d > newest)) newest = d;
+        });
+        if (!newest) {
+          issues.push(issue(rule, null, colIdx, '', 'No valid dates found'));
+          return;
+        }
+        var age = Math.floor((now.getTime() - newest.getTime()) / 86400000);
+        if (age > days) {
+          issues.push(issue(rule, null, colIdx, display(newest),
+            'Newest entry is from ' + display(newest) + ' (' + age + ' days old, limit ' + days + ')'));
+        }
+        return;
+      }
+
+      case 'outlier': {
+        var k = p === '' ? 3 : toNumber(p);
+        if (isNaN(k) || k <= 0) throw new ConfigError('Sensitivity must be a positive number, e.g. 3');
+        var vals = [];
+        dataRows.forEach(function (i) { var x = toNumber(rows[i][colIdx]); if (!isNaN(x)) vals.push(x); });
+        if (vals.length < 8) return;
+        var sorted = vals.slice().sort(function (a, b) { return a - b; });
+        var q = function (f) { var pos = (sorted.length - 1) * f, lo = Math.floor(pos), hi = Math.ceil(pos); return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo); };
+        var q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
+        if (iqr <= 0) return;
+        var lowB = q1 - k * iqr, highB = q3 + k * iqr;
+        dataRows.forEach(function (i) {
+          var x = toNumber(rows[i][colIdx]);
+          if (isNaN(x)) return;
+          if (x < lowB || x > highB) issues.push(issue(rule, first + i, colIdx, rows[i][colIdx],
+            'Unusual value: most values are between ' + fmtNum(q1) + ' and ' + fmtNum(q3)));
+        });
+        return;
+      }
+
+      case 'min_rows': {
+        var minRows = parsePositiveInt(p, 'Minimum rows');
+        if (dataRows.length < minRows) {
+          issues.push(issue(rule, null, -1, String(dataRows.length),
+            'Only ' + dataRows.length + ' data rows, expected at least ' + minRows));
+        }
+        return;
+      }
+    }
+  }
+
+  var SEV_ORDER = { config: 0, error: 1, warning: 2 };
+
+  function sortIssues(a, b) {
+    if (SEV_ORDER[a.severity] !== SEV_ORDER[b.severity]) return SEV_ORDER[a.severity] - SEV_ORDER[b.severity];
+    if (a.sheet !== b.sheet) return a.sheet < b.sheet ? -1 : 1;
+    return (a.row || 0) - (b.row || 0);
+  }
+
+  function statsFor(issues, ruleCount, rowCount) {
+    var s = { rules: ruleCount, rows: rowCount, errors: 0, warnings: 0, config: 0 };
+    issues.forEach(function (i) {
+      if (i.severity === 'error') s.errors++;
+      else if (i.severity === 'warning') s.warnings++;
+      else s.config++;
+    });
+    return s;
+  }
+
+  function issueKey(i) {
+    return [i.sheet, i.row, i.column, i.check, display(i.value), i.message].join('|');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Validating rules that come from outside (e.g. Claude)
+  // ---------------------------------------------------------------------------
+  function validateRules(candidates, headersBySheet) {
+    var sheetNames = Object.keys(headersBySheet);
+    var out = [];
+    (candidates || []).forEach(function (c) {
+      if (!c || !CHECKS[String(c.check || '').toLowerCase()]) return;
+      var check = String(c.check).toLowerCase();
+      var sheet = sheetNames.filter(function (n) { return n.toLowerCase() === String(c.sheet || '').trim().toLowerCase(); })[0];
+      if (!sheet && sheetNames.length === 1) sheet = sheetNames[0];
+      if (!sheet) return;
+      var column = '';
+      if (CHECKS[check].scope !== 'table') {
+        column = (headersBySheet[sheet] || []).filter(function (h) {
+          return String(h).trim().toLowerCase() === String(c.column || '').trim().toLowerCase();
+        })[0];
+        if (!column) return;
+        column = String(column).trim();
+      }
+      out.push({
+        sheet: sheet, column: column, check: check,
+        param: c.param === undefined || c.param === null ? '' : String(c.param),
+        severity: String(c.severity || '').toLowerCase() === 'warning' ? 'warning' : 'error',
+        description: c.description ? String(c.description) : ''
+      });
+    });
+    return out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Offline plain-language parser (English + German). Claude does this better;
+  // this keeps the add-on useful without an API key.
+  // ---------------------------------------------------------------------------
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function findColumns(text, headers) {
+    var t = text.toLowerCase();
+    var found = [];
+    headers.map(function (h) { return String(h).trim(); }).filter(Boolean)
+      .sort(function (a, b) { return b.length - a.length; })
+      .forEach(function (h) {
+        var re = new RegExp('(^|[^a-z0-9äöüß])' + escapeRe(h.toLowerCase()) + '(?=$|[^a-z0-9äöüß])', 'g');
+        var m;
+        while ((m = re.exec(t)) !== null) {
+          var start = m.index + m[1].length, end = start + h.length;
+          var overlaps = found.some(function (f) { return start < f.end && end > f.start; });
+          if (!overlaps) found.push({ header: h, start: start, end: end });
+        }
+      });
+    found.sort(function (a, b) { return a.start - b.start; });
+    var seen = {}, out = [];
+    found.forEach(function (f) { if (!seen[f.header]) { seen[f.header] = true; out.push(f.header); } });
+    return out;
+  }
+
+  function textNum(s) {
+    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) return parseFloat(s.replace(/,/g, ''));
+    return toNumber(s);
+  }
+
+  var NUM = '(-?\\d+(?:[.,]\\d+)*)';
+
+  function parseRuleText(text, headers) {
+    if (isBlank(text)) return null;
+    var original = String(text).trim();
+    var t = original.toLowerCase();
+    var cols = findColumns(original, headers || []);
+    var column = cols[0] || '';
+    var severity = /\b(warn|warning|warnung|hinweis)\b/.test(t) ? 'warning' : 'error';
+    var m;
+
+    function rule(check, param, needsColumn) {
+      if (needsColumn !== false && !column) return null;
+      return { column: needsColumn === false ? '' : column, check: check, param: param === undefined ? '' : String(param), severity: severity, description: original };
+    }
+
+    if ((m = t.match(new RegExp('(?:at least|mindestens|min(?:imum)?)\\s*' + NUM + '\\s*(?:data\\s*)?(?:rows|zeilen|entries|einträge|records|lines)'))))
+      return rule('min_rows', textNum(m[1]), false);
+
+    if (/(updat|refresh|aktualis|fresh|older|älter|within|innerhalb|newest|neueste|latest)/.test(t) &&
+        (m = t.match(/(\d+)\s*(?:days?|tagen?)/)))
+      return rule('freshness', m[1]);
+
+    if (/(required|mandatory|must not be (?:empty|blank|missing)|can'?t be (?:empty|blank)|cannot be (?:empty|blank)|never (?:empty|blank)|always (?:be )?filled|must be filled|pflicht|darf nicht leer|muss ausgefüllt|nie leer)/.test(t))
+      return rule('required');
+
+    if (/(similar|look[- ]?alike|near[- ]?duplicate|spelling|spelled|ähnlich|tippfehler|schreibweise)/.test(t))
+      return rule('fuzzy_duplicate');
+
+    if (/(unique|no duplicates?|not (?:be )?duplicated|eindeutig|keine (?:duplikate|doppelten)|doppelt|only once|nur einmal)/.test(t)) {
+      var extra = cols.length > 1 && /(combination|together|per|with|and|kombination|zusammen|pro|und)/.test(t) ? cols.slice(1).join(', ') : '';
+      return rule('unique', extra);
+    }
+
+    if (/\b(sum|total|summe|gesamt)/.test(t) && /(equal|match|=|gleich|entspricht|entsprech|stimm|abgleich|reconcile)/.test(t)) {
+      var ref = original.match(/((?:'[^']+'|[A-Za-z0-9_]+)![A-Z]{1,3}\d+)|\b([A-Z]{1,3}\d{1,6})\b/);
+      if (ref) return rule('sum_equals', ref[0]);
+      m = t.match(new RegExp('(?:equal|match|=|gleich|entspricht|entsprech\\w*|stimmt|reconcile)[^\\d-]*' + NUM));
+      if (m) return rule('sum_equals', textNum(m[1]));
+    }
+
+    if (cols.length > 1) {
+      var op = null;
+      if (/(on or after|not before|nicht vor|am oder nach|>=|at least as (?:late|large|high))/.test(t)) op = '>=';
+      else if (/(on or before|not after|nicht nach|am oder vor|<=|at most|no later than|not later than)/.test(t)) op = '<=';
+      else if (/(!=|not equal|different from|ungleich|nicht gleich)/.test(t)) op = '!=';
+      else if (/(\bafter\b|later than|greater than|more than|higher than|larger than|\bnach\b|größer|später|höher|>)/.test(t)) op = '>';
+      else if (/(\bbefore\b|earlier than|less than|smaller than|lower than|\bvor\b|kleiner|früher|niedriger|<)/.test(t)) op = '<';
+      else if (/(equal|same as|gleich|identisch|=)/.test(t)) op = '=';
+      if (op) return rule('compare', op + ' ' + cols[1]);
+    }
+
+    if (/(extra spaces?|trailing spaces?|leading spaces?|leerzeichen|whitespace)/.test(t)) return rule('no_extra_spaces');
+    if (/(outlier|unusual|abnormal|ausreißer|auffällig|ungewöhnlich)/.test(t)) return rule('outlier', '3');
+    if (/\biban\b/.test(t)) return rule('iban');
+    if (/\b(bic|swift)\b/.test(t)) return rule('bic');
+    if (/e-?mail/.test(t)) return rule('email');
+    if (/(future|zukunft)/.test(t)) return rule('not_future');
+
+    if ((m = t.match(/(\d+)\s*(?:decimal|decimals|decimal places|nachkommastellen|nachkomma|dezimalstellen)/)))
+      return rule('decimals', m[1]);
+
+    if ((m = t.match(/(\d+)\s*(?:characters|chars|zeichen|digits|stellen|ziffern)/)))
+      return rule('length', m[1]);
+
+    if ((m = original.match(/(?:match(?:es)?|pattern|format|muster)\s*:?\s*(\^\S+)/i)))
+      return rule('regex', m[1]);
+
+    if ((m = original.match(/(?:one of|either|must be in|only|allowed(?: values)?(?: are)?|erlaubt(?: sind)?|nur|entweder)\s*:?\s*(.+)$/i))) {
+      var list = m[1].replace(/[.!]+$/, '').replace(/\s+(?:or|oder)\s+/gi, ', ')
+        .split(/[,;|/]/).map(function (s) { return s.trim(); }).filter(Boolean);
+      if (list.length) return rule('allowed', list.join(', '));
+    }
+
+    if ((m = t.match(new RegExp('(?:between|zwischen)\\s+' + NUM + '\\s*(?:%\\s*)?(?:and|und|bis|-)\\s*' + NUM))))
+      return rule('range', textNum(m[1]) + '..' + textNum(m[2]));
+
+    var min = null, max = null;
+    if ((m = t.match(new RegExp('(?:at least|minimum|min\\.?|mindestens|not less than|nicht weniger als|>=)\\s*' + NUM)))) min = textNum(m[1]);
+    if ((m = t.match(new RegExp('(?:at most|maximum|max\\.?|höchstens|maximal|not more than|nicht mehr als|<=)\\s*' + NUM)))) max = textNum(m[1]);
+    if (min === null && /(positive|not (?:be )?negative|non-negative|nicht negativ|no negative|keine negativen)/.test(t)) min = 0;
+    if (min !== null || max !== null) return rule('range', (min === null ? '' : min) + '..' + (max === null ? '' : max));
+
+    if (/\b(number|numeric|zahl|numerisch)\b/.test(t)) return rule('number');
+    if (/\b(date|datum)\b/.test(t) && /(valid|gültig|real|proper|korrekt)/.test(t)) return rule('date');
+
+    return null;
+  }
+
+  return {
+    CHECKS: CHECKS,
+    checkNames: checkNames,
+    checkList: checkList,
+    runRules: runRules,
+    configIssue: configIssue,
+    issueKey: issueKey,
+    validateRules: validateRules,
+    parseRuleText: parseRuleText,
+    display: display,
+    toNumber: toNumber,
+    toDate: toDate,
+    ibanProblem: ibanProblem,
+    makeIban: makeIban,
+    fuzzyKey: fuzzyKey
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = PlausiEngine;
+
+/**
+ * Plausi — demo data: a payouts sheet with planted problems that the default
+ * rules catch. Pure JavaScript (no Apps Script services) so tests can use it.
+ */
+var PlausiDemo = (function () {
+  'use strict';
+
+  function build(now) {
+    now = now || new Date();
+    function d(offsetDays) {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
+    }
+    var iban = PlausiEngine.makeIban;
+    var typo = iban('DE', '500105175407324931').replace(/931$/, '913');   // swapped digits
+
+    var headers = ['Payout ID', 'Customer', 'IBAN', 'Email', 'Currency', 'Amount',
+      'Interest rate %', 'Start date', 'End date', 'Created at'];
+
+    var rows = [
+      ['P-1001', 'Schmidt Logistik GmbH', iban('DE', '370400440532013000'), 'finance@schmidt-logistik.de', 'EUR', 12500, 3.1, d(-30), d(335), d(-2)],
+      ['P-1002', 'Müller & Söhne GmbH', iban('DE', '120300000000202051'), 'buchhaltung@mueller-soehne.de', 'EUR', 8200.5, 2.9, d(-25), d(340), d(-2)],
+      ['P-1003', 'Hoffmann Bau AG', iban('DE', '100100100123456789'), 'kontakt@hoffmann-bau', 'EUR', 4300, 3.0, d(-20), d(345), d(-1)],
+      ['P-1004', 'Mueller und Soehne', iban('DE', '200400000628751300'), 'info@mueller-soehne.de', 'EUR', 1900, 2.9, d(-18), d(347), d(-1)],
+      ['P-1005', 'Keller Consulting', typo, 'office@keller-consulting.de', 'EUR', 1500, 3.0, d(-15), d(350), d(-1)],
+      ['P-1006', 'Becker Software UG', '', 'billing@becker-software.de', 'EUR', 2750, 3.3, d(-14), d(351), d(-1)],
+      ['P-1003', 'Wagner Medien', iban('DE', '700202700015820011'), 'ap@wagner-medien.de', 'USD', 990, 2.7, d(-12), d(353), d(-1)],
+      ['P-1008', 'Schmidt Logistik', iban('DE', '370400440532013000'), 'finance@schmidt-logistik.de', 'EUR', 640, 3.1, d(-10), d(355), d(-1)],
+      ['P-1009', 'Fischer Handel KG', iban('DE', '600501010002034304'), 'zahlungen@fischer-handel.de', 'EURO', 3100, 3.0, d(-9), d(356), d(-1)],
+      ['P-1010', 'Weber Immobilien', iban('DE', '250500000123456785'), 'konto@weber-immo.de', 'EUR', -250, 2.8, d(-8), d(357), d(0)],
+      ['P-1011', 'Schulz Partners Ltd', iban('GB', 'WEST12345698765432'), 'accounts@schulzpartners.co.uk', 'GBP', 3333.333, 3.4, d(-7), d(358), d(0)],
+      ['P-1012', 'Koch Energie GmbH', iban('DE', '430609670000001234'), 'finanzen@koch-energie.de', 'EUR', '1.250,00', 3.0, d(-6), d(359), d(0)],
+      ['P-1013', 'Richter Pharma AG', iban('DE', '300500000001234567'), 'treasury@richter-pharma.de', 'EUR', 7000, 12, d(-5), d(360), d(0)],
+      ['P-1014', 'Klein Textil', iban('DE', '820510000003456789'), 'info@klein-textil.de', 'EUR', 2100, 2.5, d(-10), d(-40), d(0)],
+      ['P-1015', 'Wolf Maschinenbau GmbH', iban('DE', '480501610043006329'), 'buchhaltung@wolf-mb.de', 'EUR', 5600, 3.2, d(-3), d(362), d(5)],
+      ['P-1016', 'Neumann Digital', iban('DE', '100700000123456700'), 'hello@neumann-digital.de', 'EUR', 2400, 3.0, d(-2), d(363), d(0)]
+    ];
+
+    var S = 'Payouts';
+    var rules = [
+      { sheet: S, column: 'Payout ID', check: 'required', param: '', severity: 'error', description: 'Every payout needs an ID' },
+      { sheet: S, column: 'Payout ID', check: 'unique', param: '', severity: 'error', description: 'Payout IDs must be unique' },
+      { sheet: S, column: 'Customer', check: 'fuzzy_duplicate', param: '', severity: 'warning', description: 'Same customer under different spellings' },
+      { sheet: S, column: 'IBAN', check: 'required', param: '', severity: 'error', description: 'IBAN is mandatory' },
+      { sheet: S, column: 'IBAN', check: 'iban', param: '', severity: 'error', description: 'IBAN must be valid' },
+      { sheet: S, column: 'Email', check: 'email', param: '', severity: 'warning', description: 'Contact e-mail looks valid' },
+      { sheet: S, column: 'Currency', check: 'allowed', param: 'EUR, USD, GBP', severity: 'error', description: 'Supported currencies only' },
+      { sheet: S, column: 'Amount', check: 'number', param: '', severity: 'error', description: 'Amount must be a real number' },
+      { sheet: S, column: 'Amount', check: 'range', param: '0..', severity: 'error', description: 'No negative payouts' },
+      { sheet: S, column: 'Amount', check: 'decimals', param: '2', severity: 'error', description: 'Amounts in cents, max 2 decimals' },
+      { sheet: S, column: 'Interest rate %', check: 'range', param: '0..5', severity: 'error', description: 'Rate between 0 and 5 %' },
+      { sheet: S, column: 'End date', check: 'compare', param: '>= Start date', severity: 'error', description: 'End date not before start date' },
+      { sheet: S, column: 'Created at', check: 'not_future', param: '', severity: 'error', description: 'No records from the future' },
+      { sheet: S, column: 'Created at', check: 'freshness', param: '7', severity: 'warning', description: 'Export updated within the last week' },
+      { sheet: S, column: '', check: 'min_rows', param: '10', severity: 'warning', description: 'Export is not suspiciously short' }
+    ];
+
+    return { sheetName: S, headers: headers, rows: rows, rules: rules };
+  }
+
+  return { build: build };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = PlausiDemo;
+
+/**
+ * Plausi Web — file handling that doesn't need the DOM:
+ * CSV parsing, SheetJS sheet → rows, header detection, rules-sheet import,
+ * and a small dependency-free .xlsx writer (highlighted copy + report).
+ */
+var PlausiWeb = (function () {
+  'use strict';
+
+  var RULES_SHEET = 'Plausi Rules';
+  var REPORT_SHEET = 'Plausi Report';
+  var RULE_HEADERS = ['Enabled', 'Sheet', 'Column', 'Check', 'Parameter', 'Severity', 'Description'];
+
+  // ---------------------------------------------------------------------------
+  // CSV / TSV
+  // ---------------------------------------------------------------------------
+  function detectDelimiter(text) {
+    var first = text.split(/\r?\n/).slice(0, 5).join('\n');
+    var best = ',', bestCount = -1;
+    [',', ';', '\t', '|'].forEach(function (d) {
+      var inQ = false, n = 0;
+      for (var i = 0; i < first.length; i++) {
+        var ch = first.charAt(i);
+        if (ch === '"') inQ = !inQ;
+        else if (!inQ && ch === d) n++;
+      }
+      if (n > bestCount) { best = d; bestCount = n; }
+    });
+    return best;
+  }
+
+  function parseCsv(text) {
+    text = String(text).replace(/^\uFEFF/, '');
+    var sepLine = text.match(/^sep=(.)\r?\n/i);
+    var d;
+    if (sepLine) { d = sepLine[1]; text = text.slice(sepLine[0].length); }
+    else d = detectDelimiter(text);
+    var rows = [], row = [], field = '', inQ = false, i = 0, n = text.length;
+    while (i < n) {
+      var ch = text.charAt(i);
+      if (inQ) {
+        if (ch === '"') {
+          if (text.charAt(i + 1) === '"') { field += '"'; i += 2; continue; }
+          inQ = false; i++; continue;
+        }
+        field += ch; i++; continue;
+      }
+      if (ch === '"' && field === '') { inQ = true; i++; continue; }
+      if (ch === d) { row.push(field); field = ''; i++; continue; }
+      if (ch === '\r' || ch === '\n') {
+        row.push(field); rows.push(row); row = []; field = '';
+        if (ch === '\r' && text.charAt(i + 1) === '\n') i++;
+        i++; continue;
+      }
+      field += ch; i++;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return { rows: rows, delimiter: d };
+  }
+
+  // ---------------------------------------------------------------------------
+  // SheetJS worksheet → 2D array of JS values (Date for date cells)
+  // ---------------------------------------------------------------------------
+  function serialToDate(XLSX, v, date1904) {
+    if (XLSX && XLSX.SSF && XLSX.SSF.parse_date_code) {
+      var p = XLSX.SSF.parse_date_code(v, { date1904: !!date1904 });
+      if (p) return new Date(p.y, p.m - 1, p.d, p.H || 0, p.M || 0, Math.floor(p.S || 0));
+    }
+    var ms = Math.round((v - (date1904 ? -1462 : 0)) * 86400000);
+    var base = new Date(Date.UTC(1899, 11, 30) + ms);
+    return new Date(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), base.getUTCHours(), base.getUTCMinutes(), base.getUTCSeconds());
+  }
+
+  function isDateFormat(XLSX, z) {
+    if (!z || z === 'General') return false;
+    if (XLSX && XLSX.SSF && XLSX.SSF.is_date) {
+      try { return XLSX.SSF.is_date(z); } catch (e) { /* fall through */ }
+    }
+    return /(^|[^"\\])[dmyhs]/i.test(String(z).replace(/"[^"]*"/g, '').replace(/\[[^\]]*\]/g, ''));
+  }
+
+  function sheetToRows(XLSX, ws, date1904) {
+    if (!ws || !ws['!ref']) return [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var rows = [];
+    // Always start at A1 so row/column numbers match what Excel shows.
+    for (var r = 0; r <= range.e.r; r++) {
+      var row = [];
+      for (var c = 0; c <= range.e.c; c++) {
+        var cell = ws[XLSX.utils.encode_cell({ r: r, c: c })];
+        var v = '';
+        if (cell) {
+          if (cell.t === 'n') v = isDateFormat(XLSX, cell.z) ? serialToDate(XLSX, cell.v, date1904) : cell.v;
+          else if (cell.t === 'd') v = cell.v instanceof Date ? cell.v : new Date(cell.v);
+          else if (cell.t === 'b') v = !!cell.v;
+          else if (cell.t === 'e') v = cell.w || '#ERROR!';
+          else if (cell.t === 's' || cell.t === 'str') v = cell.v == null ? '' : String(cell.v);
+          else if (cell.v != null) v = cell.v;
+        }
+        row.push(v);
+      }
+      rows.push(row);
+    }
+    // drop trailing empty rows
+    while (rows.length && rows[rows.length - 1].every(blank)) rows.pop();
+    return rows;
+  }
+
+  function blank(v) { return v === '' || v === null || v === undefined || (typeof v === 'string' && v.trim() === ''); }
+
+  /**
+   * The header is the widest mostly-text row near the top (title rows such as
+   * "Sales report Q3" or "Generated: 18.10.2026" are narrower and get skipped).
+   */
+  function detectHeaderRow(rows) {
+    var best = -1, bestWidth = 0, cands = [];
+    for (var i = 0; i < Math.min(rows.length, 30); i++) {
+      var filled = rows[i].filter(function (v) { return !blank(v); });
+      if (filled.length < 2) continue;
+      var texty = filled.filter(function (v) { return typeof v === 'string' && isNaN(Number(String(v).replace(',', '.'))); }).length;
+      if (texty < filled.length * 0.6) continue;
+      cands.push({ i: i, w: filled.length });
+      if (filled.length > bestWidth) bestWidth = filled.length;
+    }
+    for (var k = 0; k < cands.length; k++) if (cands[k].w >= bestWidth * 0.8) { best = cands[k].i; break; }
+    return best < 0 ? 0 : best;
+  }
+
+  /** Column names for checking: blanks become "Column F", repeats become "Amount (2)". */
+  function namedHeaders(row, width) {
+    var seen = {}, out = [];
+    for (var c = 0; c < Math.max(width || 0, (row || []).length); c++) {
+      var h = row && row[c] != null ? PlausiEngine.display(row[c]).replace(/\s+/g, ' ').trim() : '';
+      if (!h) h = 'Column ' + columnLetter(c + 1);
+      var key = h.toLowerCase(), base = h, n = 2;
+      while (seen[key]) { h = base + ' (' + n++ + ')'; key = h.toLowerCase(); }
+      seen[key] = true;
+      out.push(h);
+    }
+    return out;
+  }
+
+  var TOTAL_RE = /^(grand\s+)?(total|totals|sum|summe|gesamt|gesamtsumme|subtotal|sub-total|zwischensumme|teilsumme|endsumme|insgesamt|overall)\b/i;
+
+  /**
+   * Splits a report into data rows and the rows around them:
+   *  kind[i] = 'data' | 'total' | 'subtotal' | 'note' | 'blank' (rows after the header only).
+   */
+  function classifyRows(rows, headerRow) {
+    var width = (rows[headerRow] || []).filter(function (v) { return !blank(v); }).length;
+    var kinds = [];
+    for (var i = headerRow + 1; i < rows.length; i++) {
+      var r = rows[i] || [];
+      var filled = r.filter(function (v) { return !blank(v); });
+      if (!filled.length) { kinds.push('blank'); continue; }
+      var firstText = filled.filter(function (v) { return typeof v === 'string'; })[0];
+      if (firstText && TOTAL_RE.test(String(firstText).trim()) && filled.indexOf(firstText) <= 2) {
+        kinds.push(/sub|zwischen|teil/i.test(firstText) ? 'subtotal' : 'total');
+        continue;
+      }
+      if (width >= 3 && filled.length === 1 && typeof filled[0] === 'string' && filled[0].length > 20 && r.indexOf(filled[0]) === 0) { kinds.push('note'); continue; }
+      kinds.push('data');
+    }
+    return kinds;
+  }
+
+  /** Rows for the engine: only data rows keep their values; others become empty (row numbers stay right). */
+  function dataOnly(rows, headerRow) {
+    var kinds = classifyRows(rows, headerRow);
+    return rows.slice(headerRow + 1).map(function (r, k) { return kinds[k] === 'data' ? r : []; });
+  }
+
+  /** Reads a cell like "F112" from the same sheet (used for "column total = Total row"). */
+  function cellValue(rows, ref) {
+    var m = /^\$?([A-Z]{1,3})\$?(\d+)$/i.exec(String(ref).trim());
+    if (!m) return undefined;
+    var col = 0;
+    m[1].toUpperCase().split('').forEach(function (ch) { col = col * 26 + ch.charCodeAt(0) - 64; });
+    var r = rows[+m[2] - 1];
+    return r ? r[col - 1] : undefined;
+  }
+
+  /** Rules stored in a "Plausi Rules" sheet (same layout as the Google Sheets add-on). */
+  function rulesFromRows(rows) {
+    if (!rows || rows.length < 2) return [];
+    var head = rows[0].map(function (h) { return String(h).trim().toLowerCase(); });
+    var ix = {};
+    RULE_HEADERS.forEach(function (h) { ix[h.toLowerCase()] = head.indexOf(h.toLowerCase()); });
+    if (ix.check < 0) return [];
+    var get = function (r, k) { return ix[k] >= 0 && r[ix[k]] != null ? r[ix[k]] : ''; };
+    var out = [];
+    rows.slice(1).forEach(function (r) {
+      var check = String(get(r, 'check')).trim().toLowerCase();
+      if (!check) return;
+      var en = get(r, 'enabled');
+      out.push({
+        enabled: !(en === false || /^(false|no|nein|0)$/i.test(String(en).trim())),
+        sheet: String(get(r, 'sheet')).trim(),
+        column: String(get(r, 'column')).trim(),
+        check: check,
+        param: PlausiEngine.display(get(r, 'parameter')).trim(),
+        severity: String(get(r, 'severity')).trim().toLowerCase() === 'warning' ? 'warning' : 'error',
+        description: String(get(r, 'description')).trim()
+      });
+    });
+    return out;
+  }
+
+  function columnLetter(n) {          // 1-based
+    var s = '';
+    while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Minimal .xlsx writer (store-only ZIP, inline strings, a few fills)
+  // ---------------------------------------------------------------------------
+  var CRC_TABLE = (function () {
+    var t = new Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function utf8(s) {
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(s);
+    var out = [], i = 0;
+    s = unescape(encodeURIComponent(s));
+    for (; i < s.length; i++) out.push(s.charCodeAt(i));
+    return new Uint8Array(out);
+  }
+
+  function zip(files) {               // files: [{name, data: Uint8Array}]
+    var chunks = [], central = [], offset = 0;
+    var now = new Date();
+    var dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    var dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    function u16(a, v) { a.push(v & 0xFF, (v >>> 8) & 0xFF); }
+    function u32(a, v) { a.push(v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF); }
+    files.forEach(function (f) {
+      var name = utf8(f.name), crc = crc32(f.data), size = f.data.length;
+      var h = [];
+      u32(h, 0x04034B50); u16(h, 20); u16(h, 0x0800); u16(h, 0); u16(h, dosTime); u16(h, dosDate);
+      u32(h, crc); u32(h, size); u32(h, size); u16(h, name.length); u16(h, 0);
+      chunks.push(new Uint8Array(h), name, f.data);
+      var c = [];
+      u32(c, 0x02014B50); u16(c, 20); u16(c, 20); u16(c, 0x0800); u16(c, 0); u16(c, dosTime); u16(c, dosDate);
+      u32(c, crc); u32(c, size); u32(c, size); u16(c, name.length); u16(c, 0); u16(c, 0); u16(c, 0); u16(c, 0);
+      u32(c, 0); u32(c, offset);
+      central.push(new Uint8Array(c), name);
+      offset += h.length + name.length + size;
+    });
+    var cdSize = central.reduce(function (s, a) { return s + a.length; }, 0);
+    var e = [];
+    u32(e, 0x06054B50); u16(e, 0); u16(e, 0); u16(e, files.length); u16(e, files.length);
+    u32(e, cdSize); u32(e, offset); u16(e, 0);
+    var all = chunks.concat(central, [new Uint8Array(e)]);
+    var total = all.reduce(function (s, a) { return s + a.length; }, 0);
+    var out = new Uint8Array(total), pos = 0;
+    all.forEach(function (a) { out.set(a, pos); pos += a.length; });
+    return out;
+  }
+
+  function xmlEsc(s) {
+    return String(s)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // style ids (see STYLES)
+  var S = { plain: 0, head: 1, err: 2, warn: 3, date: 4, dateErr: 5, dateWarn: 6, link: 7, cfg: 8 };
+  var STYLES =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd"/></numFmts>' +
+    '<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font>' +
+    '<font><b/><sz val="11"/><name val="Calibri"/></font>' +
+    '<font><u/><sz val="11"/><color rgb="FF1F5F99"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFAD4D0"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFEBB0"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFE3EAF3"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFEADCF5"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="9">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    '<xf numFmtId="0" fontId="1" fillId="4" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+    '<xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyFill="1"/>' +
+    '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>' +
+    '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+    '<xf numFmtId="164" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>' +
+    '<xf numFmtId="164" fontId="0" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>' +
+    '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '<xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1"/>' +
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+    '</styleSheet>';
+
+  function isDate(v) { return Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime()); }
+
+  function dateSerial(d) {
+    return (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()) - Date.UTC(1899, 11, 30)) / 86400000;
+  }
+
+  /**
+   * sheet: { name, rows, styles?: {"r,c": styleKey}, freezeRow?: n, widths?: [chars],
+   *          links?: [{r, c, location}] }   (r, c zero-based)
+   */
+  function sheetXml(sheet) {
+    var rows = sheet.rows || [];
+    var maxC = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    var x = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'];
+    if (rows.length && maxC) x.push('<dimension ref="A1:' + columnLetter(maxC) + rows.length + '"/>');
+    x.push('<sheetViews><sheetView workbookViewId="0">');
+    if (sheet.freezeRow) {
+      x.push('<pane ySplit="' + sheet.freezeRow + '" topLeftCell="A' + (sheet.freezeRow + 1) + '" activePane="bottomLeft" state="frozen"/>');
+    }
+    x.push('</sheetView></sheetViews>');
+    if (sheet.widths && sheet.widths.length) {
+      x.push('<cols>');
+      sheet.widths.forEach(function (w, i) {
+        x.push('<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + Math.max(6, Math.min(70, w)) + '" customWidth="1"/>');
+      });
+      x.push('</cols>');
+    }
+    x.push('<sheetData>');
+    var styles = sheet.styles || {};
+    rows.forEach(function (row, r) {
+      var cells = [];
+      row.forEach(function (v, c) {
+        var ref = columnLetter(c + 1) + (r + 1);
+        var st = styles[r + ',' + c];
+        var sid = st ? S[st] : 0;
+        if (v === '' || v === null || v === undefined) {
+          if (sid) cells.push('<c r="' + ref + '" s="' + sid + '"/>');
+          return;
+        }
+        if (isDate(v)) {
+          var ds = st === 'err' ? S.dateErr : st === 'warn' ? S.dateWarn : S.date;
+          cells.push('<c r="' + ref + '" s="' + ds + '"><v>' + dateSerial(v) + '</v></c>');
+        } else if (typeof v === 'number' && isFinite(v)) {
+          cells.push('<c r="' + ref + '"' + (sid ? ' s="' + sid + '"' : '') + '><v>' + v + '</v></c>');
+        } else if (typeof v === 'boolean') {
+          cells.push('<c r="' + ref + '" t="b"' + (sid ? ' s="' + sid + '"' : '') + '><v>' + (v ? 1 : 0) + '</v></c>');
+        } else {
+          var s = String(v);
+          if (s.length > 32767) s = s.slice(0, 32767);
+          cells.push('<c r="' + ref + '" t="inlineStr"' + (sid ? ' s="' + sid + '"' : '') + '><is><t xml:space="preserve">' + xmlEsc(s) + '</t></is></c>');
+        }
+      });
+      x.push('<row r="' + (r + 1) + '">' + cells.join('') + '</row>');
+    });
+    x.push('</sheetData>');
+    if (sheet.links && sheet.links.length) {
+      x.push('<hyperlinks>');
+      sheet.links.forEach(function (l) {
+        x.push('<hyperlink ref="' + columnLetter(l.c + 1) + (l.r + 1) + '" location="' + xmlEsc(l.location) + '" display="' + xmlEsc(l.display || '') + '"/>');
+      });
+      x.push('</hyperlinks>');
+    }
+    x.push('</worksheet>');
+    return x.join('');
+  }
+
+  function safeSheetName(name, used) {
+    var base = String(name || 'Sheet').replace(/[\[\]:*?\/\\]/g, ' ').replace(/^'+|'+$/g, '').trim().slice(0, 31) || 'Sheet';
+    var n = base, k = 2;
+    while (used[n.toLowerCase()]) { var suf = ' (' + k++ + ')'; n = base.slice(0, 31 - suf.length) + suf; }
+    used[n.toLowerCase()] = true;
+    return n;
+  }
+
+  function quoteSheet(name) { return "'" + name.replace(/'/g, "''") + "'"; }
+
+  function buildXlsx(sheets) {
+    var used = {};
+    sheets = sheets.map(function (s) { var o = {}; for (var k in s) o[k] = s[k]; o.name = safeSheetName(s.name, used); return o; });
+    var files = [];
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      sheets.map(function (s, i) {
+        return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+      }).join('') + '</Types>';
+    files.push({ name: '[Content_Types].xml', data: utf8(ct) });
+    files.push({ name: '_rels/.rels', data: utf8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>') });
+    files.push({ name: 'xl/workbook.xml', data: utf8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<bookViews><workbookView/></bookViews><sheets>' +
+      sheets.map(function (s, i) { return '<sheet name="' + xmlEsc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') +
+      '</sheets></workbook>') });
+    files.push({ name: 'xl/_rels/workbook.xml.rels', data: utf8('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      sheets.map(function (s, i) {
+        return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+      }).join('') +
+      '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '</Relationships>') });
+    files.push({ name: 'xl/styles.xml', data: utf8(STYLES) });
+    sheets.forEach(function (s, i) { files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: utf8(sheetXml(s)) }); });
+    return { bytes: zip(files), names: sheets.map(function (s) { return s.name; }) };
+  }
+
+  function widthsFor(rows, maxRows) {
+    var w = [];
+    rows.slice(0, maxRows || 200).forEach(function (r) {
+      r.forEach(function (v, c) {
+        var len = isDate(v) ? 10 : String(v == null ? '' : v).length;
+        w[c] = Math.max(w[c] || 8, len + 2);
+      });
+    });
+    return w;
+  }
+
+  /**
+   * Builds the marked-up workbook.
+   * book: { sheets: [{ name, rows, headerRow }] }, rules: [...], issues: [...] from the engine.
+   */
+  function buildReport(book, rules, issues) {
+    var marks = {};                                   // sheetName -> {"r,c": style}
+    issues.forEach(function (i) {
+      if (!i.row || i.colIndex < 0) return;
+      var m = marks[i.sheet] = marks[i.sheet] || {};
+      var key = (i.row - 1) + ',' + i.colIndex;
+      if (m[key] !== 'err') m[key] = i.severity === 'warning' ? 'warn' : 'err';
+    });
+
+    var used = {}, finalNames = {};
+    var out = [];
+    book.sheets.forEach(function (s) {
+      if (s.name === RULES_SHEET || s.name === REPORT_SHEET) return;
+      var nm = safeSheetName(s.name, used);
+      finalNames[s.name] = nm;
+      var styles = {};
+      var m = marks[s.name] || {};
+      for (var k in m) styles[k] = m[k];
+      var hr = s.headerRow || 0;
+      (s.rows[hr] || []).forEach(function (h, c) { if (!styles[hr + ',' + c]) styles[hr + ',' + c] = 'head'; });
+      out.push({ name: nm, rows: s.rows, styles: styles, freezeRow: hr + 1, widths: widthsFor(s.rows) });
+    });
+
+    var rep = [['Severity', 'Sheet', 'Cell', 'Column', 'Value', 'Problem', 'Rule']];
+    var repStyles = {}, links = [];
+    for (var c = 0; c < 7; c++) repStyles['0,' + c] = 'head';
+    issues.forEach(function (i, k) {
+      var r = k + 1;
+      var sheet = finalNames[i.sheet] || i.sheet;
+      var cell = i.row ? (i.colIndex >= 0 ? columnLetter(i.colIndex + 1) : 'A') + i.row : '';
+      rep.push([i.severity === 'config' ? 'rule problem' : i.severity, sheet, cell, i.column || '',
+        isDate(i.value) ? i.value : (i.value == null ? '' : i.value), i.message, i.rule]);
+      repStyles[r + ',0'] = i.severity === 'warning' ? 'warn' : i.severity === 'config' ? 'cfg' : 'err';
+      if (cell && finalNames[i.sheet]) {
+        repStyles[r + ',2'] = 'link';
+        links.push({ r: r, c: 2, location: quoteSheet(sheet) + '!' + cell, display: cell });
+      }
+    });
+    if (!issues.length) rep.push(['', '', '', '', '', 'No problems found', '']);
+    out.push({ name: REPORT_SHEET, rows: rep, styles: repStyles, freezeRow: 1, widths: [12, 16, 8, 18, 22, 60, 40], links: links });
+
+    var rr = [RULE_HEADERS.slice()];
+    var rStyles = {};
+    for (var j = 0; j < RULE_HEADERS.length; j++) rStyles['0,' + j] = 'head';
+    rules.forEach(function (r) {
+      rr.push([r.enabled !== false, r.sheet || '', r.column || '', r.check, r.param == null ? '' : String(r.param), r.severity || 'error', r.description || '']);
+    });
+    out.push({ name: RULES_SHEET, rows: rr, styles: rStyles, freezeRow: 1, widths: [9, 16, 20, 16, 22, 10, 44] });
+
+    return buildXlsx(out).bytes;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Starter rules from the data itself, so a new file gets checked right away.
+  // Each suggestion is something the column almost always does; the rare rows
+  // that break it are what the user wants to see.
+  // ---------------------------------------------------------------------------
+  /** "ACCT_856_976" → skeleton "A_9_9" with per-run lengths, for format consistency. */
+  function shapeRuns(s) {
+    var runs = [], re = /([A-Z]+)|([a-z]+)|(\d+)|([^A-Za-z\d])/g, m;
+    while ((m = re.exec(s)) !== null) {
+      if (m[1]) runs.push(['A', m[1].length]);
+      else if (m[2]) runs.push(['a', m[2].length]);
+      else if (m[3]) runs.push(['9', m[3].length]);
+      else runs.push([m[4], 1]);
+    }
+    // merge repeated identical punctuation into one run so "a  b" and "a b" differ
+    return runs;
+  }
+  function escRe(ch) { return ch.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); }
+
+  /** Regex covering the dominant format of a text column, or null. */
+  function formatPattern(texts) {
+    if (texts.length < 10) return null;
+    var groups = {};
+    texts.forEach(function (t) {
+      if (t.length > 40) return;
+      var runs = shapeRuns(t);
+      var key = runs.map(function (r) { return r[0]; }).join('');
+      var g = groups[key] || (groups[key] = { n: 0, runs: runs.map(function (r) { return [r[0], r[1], r[1]]; }) });
+      g.n++;
+      runs.forEach(function (r, i) { g.runs[i][1] = Math.min(g.runs[i][1], r[1]); g.runs[i][2] = Math.max(g.runs[i][2], r[1]); });
+    });
+    var keys = Object.keys(groups);
+    if (!keys.length) return null;
+    var top = keys.reduce(function (a, b) { return groups[b].n > groups[a].n ? b : a; });
+    var g = groups[top];
+    // If one exact length pattern covers 90 %, use exact lengths so "ACCT_1_2_3_4" stands out.
+    var exact = {};
+    texts.forEach(function (t) {
+      var runs = shapeRuns(t);
+      if (runs.map(function (r) { return r[0]; }).join('') !== top) return;
+      var k = runs.map(function (r) { return r[1]; }).join(',');
+      exact[k] = (exact[k] || 0) + 1;
+    });
+    var topExact = Object.keys(exact).reduce(function (a, b) { return exact[b] > exact[a] ? b : a; });
+    if (exact[topExact] >= texts.length * 0.9) {
+      var lens = topExact.split(',').map(Number);
+      g = { n: exact[topExact], runs: g.runs.map(function (r, i) { return [r[0], lens[i], lens[i]]; }) };
+    }
+    if (g.n < texts.length * 0.9) return null;
+    if (!/9/.test(top) || !/[^Aa9]|9/.test(top)) return null;              // codes with digits, not free text
+    if (/ /.test(top) && top.replace(/[^ ]/g, '').length > 2) return null; // looks like a sentence
+    return '^' + g.runs.map(function (r) {
+      var cls = r[0] === 'A' ? '[A-Z]' : r[0] === 'a' ? '[a-z]' : r[0] === '9' ? '\\d' : escRe(r[0]);
+      var cnt = r[1] === r[2] ? (r[1] === 1 ? '' : '{' + r[1] + '}') : '{' + r[1] + ',' + r[2] + '}';
+      return cls + cnt;
+    }).join('') + '$';
+  }
+
+  /**
+   * Report-level suggestions that need the full sheet (header + total rows).
+   * rows: the whole sheet; headerRow: index of the header row.
+   */
+  function suggestForSheet(sheetName, rows, headerRow) {
+    var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    var hs = namedHeaders(rows[headerRow], width);
+    var out = suggestRules(sheetName, hs, dataOnly(rows, headerRow));
+    var kinds = classifyRows(rows, headerRow);
+    var totals = [];
+    kinds.forEach(function (k, j) { if (k === 'total') totals.push(headerRow + 1 + j); });
+    if (totals.length === 1) {
+      var tr = rows[totals[0]];
+      hs.forEach(function (h, c) {
+        var v = tr[c];
+        if (typeof v !== 'number' && isNaN(PlausiEngine.toNumber(v))) return;
+        if (blank(v)) return;
+        var isNumCol = out.some(function (r) { return r.column === h && (r.check === 'range' || r.check === 'number' || r.check === 'outlier' || r.check === 'decimals'); });
+        if (!isNumCol) return;
+        var ref = columnLetter(c + 1) + (totals[0] + 1);
+        out.push({ sheet: sheetName, column: h, check: 'sum_equals', param: ref, severity: 'error',
+          description: h + ' must add up to the total in ' + ref, enabled: true, suggested: true });
+      });
+    }
+    return out;
+  }
+
+  function suggestRules(sheetName, headers, rows) {
+    var data = rows.filter(function (r) { return r.some(function (v) { return !blank(v); }); });
+    var n = data.length;
+    if (!n) return [];
+    var out = [];
+    function add(column, check, param, severity, description) {
+      out.push({ sheet: sheetName, column: column, check: check, param: param || '', severity: severity || 'error', description: description, enabled: true, suggested: true });
+    }
+    headers.forEach(function (h, c) {
+      h = String(h == null ? '' : h).trim();
+      if (!h) return;
+      var vals = data.map(function (r) { return r[c]; });
+      var filled = vals.filter(function (v) { return !blank(v); });
+      if (!filled.length) return;
+      var share = function (pred) { return filled.filter(pred).length / filled.length; };
+      var name = h.toLowerCase();
+
+      var nums = filled.map(function (v) { return PlausiEngine.toNumber(v); });
+      var numShare = nums.filter(function (x) { return !isNaN(x); }).length / filled.length;
+      var dateShare = share(function (v) { return !!PlausiEngine.toDate(v); });
+      var boolShare = share(function (v) { return typeof v === 'boolean' || /^(true|false|wahr|falsch|yes|no|ja|nein)$/i.test(String(v).trim()); });
+      var texts = filled.map(function (v) { return PlausiEngine.display(v).trim(); });
+      var distinct = {};
+      texts.forEach(function (t) { var k = t.toLowerCase(); distinct[k] = (distinct[k] || 0) + 1; });
+      var distinctCount = Object.keys(distinct).length;
+
+      // completeness: a column that is almost always filled should always be filled
+      if (filled.length / n >= 0.8 && filled.length < n) add(h, 'required', '', 'error', h + ' is usually filled; flag empty cells');
+      else if (filled.length === n && n >= 3) add(h, 'required', '', 'error', h + ' must be filled');
+
+      // identifiers: ID-like name and (almost) all values distinct
+      var idName = /(^|[\s_\-.#])(id|nr|no|number|nummer|ref|reference|referenz|key|code)([\s_\-.#]|$)/i.test(name) || /(id|nr|nummer|number|no\.?)$/i.test(name.replace(/[\s_\-.#]+$/, ''));
+      var repeats = filled.length - distinctCount;
+      if (idName && filled.length >= 3 && (distinctCount / filled.length >= 0.8 || repeats <= Math.max(2, filled.length * 0.05))) {
+        add(h, 'unique', '', 'error', h + ' must not repeat');
+      }
+
+      if (share(function (v) { return /^[A-Z]{2}\d{2}\s?[A-Z0-9]/i.test(String(v)) && String(v).replace(/\s/g, '').length >= 15; }) >= 0.8 || /\biban\b/.test(name)) {
+        add(h, 'iban', '', 'error', h + ' must be a valid IBAN');
+        return;
+      }
+      var textVals = filled.filter(function (v) { return typeof v === 'string'; });
+      if (textVals.length >= filled.length * 0.5 && textVals.some(function (v) { return /^\s|\s$|\S\s{2,}\S/.test(v); })) {
+        add(h, 'no_extra_spaces', '', 'warning', h + ' should have no stray spaces');
+      }
+
+      if (/\b(bic|swift)\b/.test(name) || share(function (v) { return /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(String(v).trim()); }) >= 0.9) {
+        add(h, 'bic', '', 'error', h + ' must be a valid BIC');
+        return;
+      }
+      if (share(function (v) { return /@/.test(String(v)); }) >= 0.8 || /e-?mail/.test(name)) {
+        add(h, 'email', '', 'warning', h + ' should be a valid e-mail address');
+        return;
+      }
+      if (boolShare >= 0.9 && distinctCount <= 2) {
+        add(h, 'allowed', 'TRUE, FALSE', 'error', h + ' must be TRUE or FALSE');
+        return;
+      }
+      if (dateShare >= 0.9 && numShare < 0.5) {
+        add(h, 'date', '', 'error', h + ' must be a valid date');
+        if (/(created|booked|booking|paid|posted|erstellt|gebucht|bezahlt|timestamp|date of)/.test(name)) add(h, 'not_future', '', 'error', h + ' cannot be in the future');
+        return;
+      }
+      if (numShare >= 0.9) {
+        if (numShare < 1 || filled.some(function (v) { return typeof v !== 'number'; })) add(h, 'number', '', 'error', h + ' must be a number');
+        var nonNeg = nums.filter(function (x) { return !isNaN(x) && x >= 0; }).length / filled.length;
+        var pctName = /(%|percent|prozent|rate|quote|ratio|anteil|share|margin)/.test(name);
+        var okNums = nums.filter(function (x) { return !isNaN(x); });
+        var inUnit = okNums.filter(function (x) { return x >= 0 && x <= 1; }).length / okNums.length;
+        var inPct = okNums.filter(function (x) { return x >= 0 && x <= 100; }).length / okNums.length;
+        if (pctName && inUnit >= 0.95) add(h, 'range', '0..1', 'error', h + ' must be between 0 and 1 (0–100 %)');
+        else if (pctName && inPct >= 0.95 && !/rate/.test(name)) add(h, 'range', '0..100', 'error', h + ' must be between 0 and 100');
+        else if (nonNeg >= 0.95) add(h, 'range', '0..', 'error', h + ' must not be negative');
+        var money = /(amount|balance|interest|tax|fee|price|cost|total|eur|usd|betrag|saldo|zins|steuer|gebühr|preis|summe)/.test(name);
+        if (money) add(h, 'decimals', '2', 'warning', h + ' should have at most 2 decimals (cents)');
+        var distinctNums = {};
+        okNums.forEach(function (x) { distinctNums[x] = true; });
+        if (!idName && okNums.length >= 20 && Object.keys(distinctNums).length >= 10) {
+          add(h, 'outlier', '3', 'warning', 'Unusually large or small ' + h);
+        }
+        var numCounts = {};
+        nums.forEach(function (x) { if (!isNaN(x)) numCounts[x] = (numCounts[x] || 0) + 1; });
+        var keys = Object.keys(numCounts);
+        var common = keys.filter(function (k) { return numCounts[k] >= 2; });
+        var rareN = keys.length - common.length;
+        var wholeNums = okNums.every(function (x) { return Math.round(x) === x; });
+        if (wholeNums && !idName && !money && filled.length >= 10 && keys.length >= 2 && keys.length <= 8 && rareN <= 2 && common.length >= 2) {
+          add(h, 'allowed', common.map(Number).sort(function (a, b) { return a - b; }).join(', '), 'warning', h + ' should be one of the usual values');
+        }
+        return;
+      }
+      var pattern = formatPattern(texts);
+      if (pattern) {
+        add(h, 'regex', pattern, 'error', h + ' should follow the same format as the other values');
+      }
+
+      // short codes (currency, country, status) used throughout the file
+      var shortCodes = texts.every(function (t) { return t.length <= 12; });
+      var commonCodes = Object.keys(distinct).filter(function (k) { return distinct[k] >= 2; });
+      var rareCodes = Object.keys(distinct).length - commonCodes.length;
+      if (shortCodes && filled.length >= 10 && commonCodes.length >= 1 && commonCodes.length <= 12 && rareCodes <= 3 &&
+          (rareCodes > 0 || commonCodes.length <= 6) && /(currency|währung|country|land|status|type|typ|segment|category|kategorie|code|unit|einheit)/.test(name) ||
+          shortCodes && filled.length >= 10 && commonCodes.length === 1 && rareCodes <= 2) {
+        var keep = {};
+        texts.forEach(function (t) { var k = t.toLowerCase(); if (distinct[k] >= 2 && !keep[k]) keep[k] = t; });
+        add(h, 'allowed', Object.keys(keep).map(function (k) { return keep[k]; }).join(', '), rareCodes ? 'warning' : 'error', h + ' must be ' + (commonCodes.length === 1 ? keep[commonCodes[0]] : 'one of the usual values'));
+        return;
+      }
+      // short code lists: a handful of values, each used several times → typos stand out
+      if (filled.length >= 10 && distinctCount <= 12 && distinctCount < filled.length / 3) {
+        var common = Object.keys(distinct).filter(function (k) { return distinct[k] >= 2; });
+        var rare = Object.keys(distinct).filter(function (k) { return distinct[k] === 1; });
+        if (rare.length && rare.length <= 3 && common.length >= 2) {
+          var shown = {};
+          texts.forEach(function (t) { if (distinct[t.toLowerCase()] >= 2 && !shown[t.toLowerCase()]) shown[t.toLowerCase()] = t; });
+          add(h, 'allowed', Object.keys(shown).map(function (k) { return shown[k]; }).join(', '), 'warning', h + ' should be one of the values used elsewhere in the column');
+        }
+      }
+      if (/(name|customer|client|kunde|bank|company|firma|supplier|lieferant|vendor)/.test(name) && distinctCount > 1) {
+        add(h, 'fuzzy_duplicate', '', 'warning', 'Same ' + h + ' written differently');
+      }
+    });
+
+    // start/end date pairs, e.g. "Placement Start Date" and "Deposit Closing Date"
+    var dateCols = [];
+    headers.forEach(function (h, c) {
+      h = String(h == null ? '' : h).trim();
+      var vals = data.map(function (r) { return r[c]; }).filter(function (v) { return !blank(v); });
+      if (h && vals.length && vals.filter(function (v) { return !!PlausiEngine.toDate(v); }).length / vals.length >= 0.9) dateCols.push({ h: h, c: c });
+    });
+    var startRe = /(start|begin|beginn|placement|open|opening|from|von|valid from|issue|ausgabe|eröffnung)/i;
+    var endRe = /(end|ende|closing|close|maturity|fällig|until|bis|to\b|expiry|ablauf|valid to)/i;
+    dateCols.filter(function (d) { return startRe.test(d.h); }).forEach(function (st) {
+      dateCols.filter(function (d) { return d !== st && endRe.test(d.h) && !startRe.test(d.h); }).forEach(function (en) {
+        var pairs = data.filter(function (r) { return PlausiEngine.toDate(r[st.c]) && PlausiEngine.toDate(r[en.c]); });
+        if (!pairs.length) return;
+        var ok = pairs.filter(function (r) { return PlausiEngine.toDate(r[en.c]) >= PlausiEngine.toDate(r[st.c]); }).length / pairs.length;
+        if (ok >= 0.8) add(en.h, 'compare', '>= ' + st.h, 'error', en.h + ' cannot be before ' + st.h);
+      });
+    });
+    return out;
+  }
+
+  function reportCsv(issues) {
+    var q = function (v) {
+      var s = isDate(v) ? PlausiEngine.display(v) : String(v == null ? '' : v);
+      if (/^[=+\-@]/.test(s)) s = "'" + s;          // keep spreadsheet apps from evaluating it
+      return /[",;\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    var lines = [['Severity', 'Sheet', 'Cell', 'Column', 'Value', 'Problem', 'Rule'].join(',')];
+    issues.forEach(function (i) {
+      var cell = i.row ? (i.colIndex >= 0 ? columnLetter(i.colIndex + 1) : 'A') + i.row : '';
+      lines.push([i.severity, i.sheet, cell, i.column, i.value, i.message, i.rule].map(q).join(','));
+    });
+    return '\uFEFF' + lines.join('\r\n');
+  }
+
+  return {
+    RULES_SHEET: RULES_SHEET, REPORT_SHEET: REPORT_SHEET,
+    parseCsv: parseCsv, sheetToRows: sheetToRows, detectHeaderRow: detectHeaderRow,
+    rulesFromRows: rulesFromRows, columnLetter: columnLetter, suggestRules: suggestRules, suggestForSheet: suggestForSheet,
+    namedHeaders: namedHeaders, classifyRows: classifyRows, dataOnly: dataOnly, cellValue: cellValue, formatPattern: formatPattern,
+    buildXlsx: buildXlsx, buildReport: buildReport, reportCsv: reportCsv, crc32: crc32
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = PlausiWeb;
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var E = PlausiEngine, W = PlausiWeb;
+
+  var PREVIEW_ROWS = 200, ISSUE_PAGE = 300;
+  var EXCEL_EXT = ['xlsx', 'xlsm', 'xlsb', 'xls', 'xltx', 'xltm', 'xlt', 'ods', 'fods'];
+  var TEXT_EXT = ['csv', 'tsv', 'txt'];
+
+  var state = {
+    file: { name: 'Sample payouts', format: 'sample', sample: true },
+    sheets: [], current: 0, rules: [], result: null,
+    filter: 'all', shown: ISSUE_PAGE, previewStart: null, flash: null, problem: ''
+  };
+  var sample = null;          // Claude, when the viewer's app offers it
+  var downloads;              // undefined = not checked yet, null = unavailable
+
+  // ---------------------------------------------------------------------------
+  // helpers
+  // ---------------------------------------------------------------------------
+  function el(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'class') e.className = attrs[k];
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== false && attrs[k] != null) e.setAttribute(k, attrs[k] === true ? '' : attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+  function sheet() { return state.sheets[state.current]; }
+  function width(s) { return s.rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0); }
+  function headers(s) { return W.namedHeaders(s.rows[s.headerRow] || [], width(s)); }
+  function headersBySheet() {
+    var o = {};
+    state.sheets.forEach(function (s) { o[s.name] = headers(s).filter(Boolean); });
+    return o;
+  }
+  function signature() {
+    return state.sheets.map(function (s) { return s.name + ':' + headers(s).join('|'); }).join('||');
+  }
+  function store(key, val) {
+    try { if (val === undefined) return JSON.parse(localStorage.getItem(key) || 'null'); localStorage.setItem(key, JSON.stringify(val)); }
+    catch (e) { return null; }
+  }
+  function cellRef(i) { return i.row ? (i.colIndex >= 0 ? W.columnLetter(i.colIndex + 1) : 'A') + i.row : ''; }
+  function rulesFor(s) {
+    var single = state.sheets.length === 1;
+    return state.rules.filter(function (r) { return r.sheet === s.name || (!r.sheet && single); });
+  }
+
+  // ---------------------------------------------------------------------------
+  // loading
+  // ---------------------------------------------------------------------------
+  function loadSample() {
+    var d = PlausiDemo.build(new Date());
+    state.file = { name: 'Sample payouts', format: 'sample', sample: true };
+    state.sheets = [{ name: d.sheetName, rows: [d.headers].concat(d.rows), headerRow: 0, textInput: false }];
+    state.rules = d.rules.map(function (r) { var o = {}; for (var k in r) o[k] = r[k]; o.enabled = true; return o; });
+    state.current = 0;
+    state.problem = '';
+    resetView();
+  }
+
+  function resetView() { state.filter = 'all'; state.shown = ISSUE_PAGE; state.previewStart = null; state.flash = null; run(); }
+
+  function ext(name) { var m = /\.([^.]+)$/.exec(name || ''); return m ? m[1].toLowerCase() : ''; }
+
+  function readText(file) {
+    return file.arrayBuffer().then(function (buf) {
+      var text = new TextDecoder('utf-8').decode(buf);
+      if (text.indexOf('\uFFFD') > -1) {
+        try { text = new TextDecoder('windows-1252').decode(buf); } catch (e) { /* keep utf-8 */ }
+      }
+      return text;
+    });
+  }
+
+  function openFile(file) {
+    var x = ext(file.name);
+    var base = file.name.replace(/\.[^.]+$/, '');
+    var p;
+    if (TEXT_EXT.indexOf(x) > -1) {
+      p = readText(file).then(function (text) {
+        var parsed = W.parseCsv(text);
+        return [{ name: base.slice(0, 31) || 'Data', rows: parsed.rows, textInput: true }];
+      });
+    } else if (EXCEL_EXT.indexOf(x) > -1 || !x) {
+      if (!window.XLSX) return showProblem(window.PLAUSI_XLSX_HINT || 'The Excel reader could not load, so only CSV files work right now. Check your connection and reload the page.');
+      p = file.arrayBuffer().then(function (buf) {
+        var wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellNF: true, cellDates: false });
+        var d1904 = !!(wb.Workbook && wb.Workbook.WBProps && wb.Workbook.WBProps.date1904);
+        return wb.SheetNames.map(function (n) { return { name: n, rows: W.sheetToRows(XLSX, wb.Sheets[n], d1904), textInput: false }; });
+      });
+    } else {
+      return showProblem('"' + file.name + '" is not a spreadsheet. Open an .xlsx, .xlsm, .xlsb, .xls, .ods or .csv file.');
+    }
+    $('fileName').textContent = 'Reading ' + file.name + '…';
+    loadSheets(file.name, x || 'file', p);
+  }
+
+  /** Shows sheets from any source: a file, a web page's tables, a downloaded link. */
+  function loadSheets(name, format, sheetsOrPromise) {
+    Promise.resolve(sheetsOrPromise).then(function (sheets) {
+      var rulesSheet = sheets.filter(function (s) { return s.name === W.RULES_SHEET; })[0];
+      var data = sheets.filter(function (s) { return s.name !== W.RULES_SHEET && s.name !== W.REPORT_SHEET; });
+      if (!data.length || data.every(function (s) { return !s.rows.length; })) throw new Error('This file has no data in it.');
+      data.forEach(function (s) { s.headerRow = W.detectHeaderRow(s.rows); });
+      state.file = { name: name, format: format, sample: false, rulesFrom: '' };
+      state.sheets = data;
+      state.current = Math.max(0, data.findIndex(function (s) { return s.rows.length > 0; }));
+      var fromFile = rulesSheet ? W.rulesFromRows(rulesSheet.rows) : [];
+      var remembered = store('plausi.rules.' + signature());
+      if (fromFile.length) { state.rules = fromFile; state.file.rulesFrom = 'file'; }
+      else if (remembered && remembered.length) { state.rules = remembered; state.file.rulesFrom = 'memory'; }
+      else { state.rules = suggestAll(); state.file.rulesFrom = state.rules.length ? 'suggested' : ''; }
+      state.problem = '';
+      resetView();
+    }).catch(function (e) {
+      var msg = String(e && e.message || e);
+      if (/password|encrypt/i.test(msg)) msg = 'This file is password-protected. Save an unprotected copy in Excel and open that.';
+      showProblem('Could not read "' + name + '": ' + msg);
+      render();
+    });
+  }
+
+  function suggestAll() {
+    var out = [];
+    state.sheets.forEach(function (s) {
+      out = out.concat(W.suggestForSheet(s.name, s.rows, s.headerRow || 0));
+    });
+    return out;
+  }
+
+  function showProblem(msg) { state.problem = msg; renderBanner(); }
+
+  // ---------------------------------------------------------------------------
+  // checking
+  // ---------------------------------------------------------------------------
+  function run() {
+    var now = new Date();
+    var issues = [], stats = { rules: 0, rows: 0, errors: 0, warnings: 0, config: 0 };
+    var names = {};
+    state.sheets.forEach(function (s) {
+      names[s.name] = true;
+      var rs = rulesFor(s).filter(function (r) { return r.enabled !== false; });
+      var h = s.headerRow || 0;
+      rs = rs.map(function (r) {
+        if (r.check !== 'sum_equals' || !/^\$?[A-Z]{1,3}\$?\d+$/i.test(String(r.param).trim())) return r;
+        var o = {}; for (var k in r) o[k] = r[k];
+        o.resolvedParam = W.cellValue(s.rows, r.param);
+        return o;
+      });
+      var res = E.runRules({ sheetName: s.name, headers: headers(s), rows: W.dataOnly(s.rows, h), firstDataRow: h + 2 }, rs, { now: now, textInput: s.textInput });
+      res.issues.forEach(function (i) { i.sheet = s.name; });
+      issues = issues.concat(res.issues);
+      stats.rules += res.stats.rules; stats.rows += res.stats.rows;
+      stats.errors += res.stats.errors; stats.warnings += res.stats.warnings; stats.config += res.stats.config;
+    });
+    state.rules.forEach(function (r) {
+      if (r.enabled === false || !r.sheet || names[r.sheet]) return;
+      issues.push(E.configIssue(r, 'Sheet "' + r.sheet + '" is not in this file'));
+      stats.config++; stats.rules++;
+    });
+    var order = { config: 0, error: 1, warning: 2 };
+    issues.sort(function (a, b) {
+      return (order[a.severity] - order[b.severity]) || (a.sheet < b.sheet ? -1 : a.sheet > b.sheet ? 1 : 0) || ((a.row || 0) - (b.row || 0));
+    });
+    state.result = { issues: issues, stats: stats };
+    if (!state.file.sample) store('plausi.rules.' + signature(), state.rules);
+    render();
+  }
+
+  // ---------------------------------------------------------------------------
+  // rendering
+  // ---------------------------------------------------------------------------
+  function render() {
+    renderFile(); renderBanner(); renderSheetControls(); renderRules(); renderSummary(); renderIssues(); renderPreview(); renderDownloads();
+  }
+
+  function renderFile() {
+    $('fileName').textContent = state.file.name;
+    $('fileFormat').textContent = state.file.sample ? 'Sample' : state.file.format;
+  }
+
+  function renderBanner() {
+    var b = $('banner');
+    b.innerHTML = '';
+    if (state.problem) {
+      b.className = 'note problem';
+      b.appendChild(el('span', { text: state.problem }));
+      return;
+    }
+    if (state.file.sample) {
+      b.className = 'note sample';
+      b.appendChild(el('span', {}, [el('b', { text: 'This is sample data: ' }), 'a payouts export with 13 planted problems and 15 rules. Open your own file or drop it anywhere on the page.']));
+    } else {
+      b.className = 'note';
+      var msg = state.file.rulesFrom === 'file' ? 'Rules loaded from the file’s “Plausi Rules” sheet.'
+        : state.file.rulesFrom === 'memory' ? 'Rules restored from the last time you checked a file with these columns.'
+        : state.file.rulesFrom === 'suggested' ? 'This file had no rules, so Plausi suggested ' + plural(state.rules.length, 'starter rule') + ' from your columns. Check them on the left, delete what doesn’t fit, and add your own.'
+        : 'No rules yet. Describe what the data should look like, on the left.';
+      b.appendChild(el('span', {}, [el('b', { text: plural(state.sheets.length, 'sheet') + ' read. ' }), msg]));
+    }
+    var f = el('span', { class: 'formats' });
+    ['xlsx', 'xlsm', 'xlsb', 'xls', 'ods', 'csv', 'tsv'].forEach(function (x) { f.appendChild(el('span', { text: '.' + x })); });
+    b.appendChild(f);
+  }
+
+  function renderSheetControls() {
+    var sel = $('sheetSelect');
+    sel.innerHTML = '';
+    state.sheets.forEach(function (s, i) {
+      sel.appendChild(el('option', { value: i, text: s.name + (s.rows.length ? '' : ' (empty)') }));
+    });
+    sel.value = state.current;
+    sel.disabled = state.sheets.length < 2;
+    var s = sheet();
+    $('headerRow').value = s ? s.headerRow + 1 : 1;
+    $('headerRow').max = s ? Math.max(1, s.rows.length) : 1;
+
+    var hs = s ? headers(s).filter(Boolean) : [];
+    var bc = $('bColumn'); bc.innerHTML = '';
+    hs.forEach(function (h) { bc.appendChild(el('option', { value: h, text: h })); });
+    var ex = $('examples'); ex.innerHTML = '';
+    exampleSentences(hs).forEach(function (t) {
+      ex.appendChild(el('button', { type: 'button', text: t, onclick: function () { $('ruleText').value = t; $('ruleText').focus(); } }));
+    });
+  }
+
+  function exampleSentences(hs) {
+    var find = function (re) { return hs.filter(function (h) { return re.test(h); })[0]; };
+    var out = [];
+    var id = find(/\b(id|nr|no|number|nummer)\b/i) || hs[0];
+    if (id) out.push(id + ' must be unique');
+    var iban = find(/iban/i); if (iban) out.push(iban + ' must be valid');
+    var amt = find(/amount|betrag|balance|saldo|interest|zins|tax|steuer/i); if (amt) out.push(amt + ' must not be negative');
+    var name = find(/name|customer|kunde|bank/i); if (name && out.length < 4) out.push('Warn if ' + name + ' values look similar');
+    return out.slice(0, 4);
+  }
+
+  function renderRules() {
+    var s = sheet();
+    var list = $('ruleList'); list.innerHTML = '';
+    var rs = s ? rulesFor(s) : [];
+    $('ruleCount').textContent = plural(state.rules.filter(function (r) { return r.enabled !== false; }).length, 'rule') + ' active';
+    if (!rs.length) { list.appendChild(el('li', { class: 'empty-rules', text: 'No rules for this sheet yet. Use “Suggest rules from my data” or describe one above.' })); return; }
+    rs.forEach(function (r) {
+      var off = r.enabled === false;
+      list.appendChild(el('li', { class: 'rule' + (off ? ' off' : '') }, [
+        el('div', { class: 'what' }, [
+          el('span', { class: 'col', text: r.column || 'Whole sheet' }),
+          el('span', { class: 'chip', text: r.check }),
+          r.param ? el('span', { class: 'param', text: String(r.param) }) : null,
+          r.suggested ? el('span', { class: 'sugg', text: 'suggested' }) : null
+        ]),
+        el('div', { class: 'acts' }, [
+          el('button', { type: 'button', class: 'sev ' + (r.severity === 'warning' ? 'warning' : 'error'), text: r.severity === 'warning' ? 'warn' : 'error',
+            title: 'Switch between error and warning', onclick: function () { r.severity = r.severity === 'warning' ? 'error' : 'warning'; run(); } }),
+          el('button', { type: 'button', class: 'icon-btn', text: off ? 'Turn on' : 'Turn off', onclick: function () { r.enabled = off; run(); } }),
+          el('button', { type: 'button', class: 'icon-btn', text: 'Delete', 'aria-label': 'Delete rule ' + (r.description || r.check),
+            onclick: function () { state.rules.splice(state.rules.indexOf(r), 1); run(); } })
+        ]),
+        r.description ? el('div', { class: 'desc', text: r.description }) : null
+      ]));
+    });
+  }
+
+  function renderSummary() {
+    var st = state.result.stats, box = $('summary');
+    box.innerHTML = '';
+    var clean = !st.errors && !st.warnings && !st.config;
+    [['e', st.errors, 'errors'], ['w', st.warnings, 'warnings'], ['c', st.config, 'rule problems'], [clean && st.rules ? 'ok' : '', st.rows, 'rows checked']].forEach(function (t) {
+      box.appendChild(el('div', { class: 'tile ' + t[0] }, [el('b', { text: t[1].toLocaleString() }), el('span', { text: t[2] })]));
+    });
+  }
+
+  function filtered() {
+    var f = state.filter;
+    return state.result.issues.filter(function (i) { return f === 'all' || i.severity === f; });
+  }
+
+  function renderIssues() {
+    var st = state.result.stats;
+    var fb = $('filters'); fb.innerHTML = '';
+    [['all', 'All', st.errors + st.warnings + st.config], ['error', 'Errors', st.errors], ['warning', 'Warnings', st.warnings], ['config', 'Rule problems', st.config]].forEach(function (f) {
+      if (f[0] === 'config' && !f[2]) return;
+      fb.appendChild(el('button', { type: 'button', 'aria-pressed': String(state.filter === f[0]), text: f[1] + ' ' + f[2],
+        onclick: function () { state.filter = f[0]; state.shown = ISSUE_PAGE; renderIssues(); } }));
+    });
+    var ul = $('issues'); ul.innerHTML = '';
+    var items = filtered();
+    if (!state.rules.length) { ul.appendChild(el('li', { class: 'clean', style: 'color:var(--muted)', text: 'Add a rule to start checking.' })); return; }
+    if (!items.length) { ul.appendChild(el('li', { class: 'clean', text: 'No problems found.' })); return; }
+    items.slice(0, state.shown).forEach(function (i) {
+      var ref = cellRef(i);
+      var li = el('li', { class: 'issue ' + i.severity, tabindex: '0' }, [
+        el('span', { class: 'stripe' }),
+        el('span', { class: 'ref' }, [ref || (i.severity === 'config' ? 'Rule' : 'Sheet'), state.sheets.length > 1 ? el('small', { text: i.sheet }) : null]),
+        el('div', {}, [
+          el('div', { class: 'msg', text: i.message }),
+          el('div', { class: 'meta' }, [
+            i.column ? el('span', { text: i.column }) : null,
+            i.value !== '' && i.value != null ? el('span', { class: 'val', text: E.display(i.value) }) : null,
+            el('span', { text: i.rule })
+          ])
+        ])
+      ]);
+      if (i.row) {
+        var go = function () { jumpTo(i); };
+        li.addEventListener('click', go);
+        li.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+      }
+      ul.appendChild(li);
+    });
+    if (items.length > state.shown) {
+      ul.appendChild(el('li', { class: 'more' }, [el('button', { type: 'button', class: 'btn', text: 'Show ' + Math.min(ISSUE_PAGE, items.length - state.shown) + ' more of ' + (items.length - state.shown).toLocaleString(),
+        onclick: function () { state.shown += ISSUE_PAGE; renderIssues(); } })]));
+    }
+  }
+
+  function jumpTo(i) {
+    var idx = state.sheets.findIndex(function (s) { return s.name === i.sheet; });
+    if (idx < 0) return;
+    state.current = idx;
+    var s = sheet();
+    var r0 = i.row - 1;                                  // zero-based row in s.rows
+    var start = state.previewStart == null ? s.headerRow + 1 : state.previewStart;
+    if (r0 < start || r0 >= start + PREVIEW_ROWS) state.previewStart = Math.max(s.headerRow + 1, r0 - 10);
+    state.flash = r0 + ',' + i.colIndex;
+    renderSheetControls(); renderRules(); renderPreview();
+    var cell = document.querySelector('td[data-k="' + state.flash + '"]');
+    if (cell) cell.scrollIntoView({ block: 'center', inline: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+
+  function renderPreview() {
+    var tabs = $('tabs'); tabs.innerHTML = '';
+    var counts = {};
+    state.result.issues.forEach(function (i) { if (i.severity !== 'config') counts[i.sheet] = (counts[i.sheet] || 0) + 1; });
+    state.sheets.forEach(function (s, idx) {
+      tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(idx === state.current),
+        onclick: function () { state.current = idx; state.previewStart = null; state.flash = null; renderSheetControls(); renderRules(); renderPreview(); } },
+        [s.name, counts[s.name] ? el('span', { class: 'cnt', text: counts[s.name] }) : null]));
+    });
+
+    var s = sheet(), wrap = $('gridWrap'), foot = $('previewFoot');
+    wrap.innerHTML = ''; foot.innerHTML = '';
+    if (!s || !s.rows.length) { wrap.appendChild(el('p', { class: 'more muted', text: 'This sheet is empty.' })); return; }
+    var marks = {};
+    state.result.issues.forEach(function (i) {
+      if (i.sheet !== s.name || !i.row || i.colIndex < 0) return;
+      var k = (i.row - 1) + ',' + i.colIndex;
+      var m = marks[k] || (marks[k] = { sev: 'w', msgs: [] });
+      if (i.severity !== 'warning') m.sev = 'e';
+      m.msgs.push(i.message);
+    });
+    var width = s.rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    var start = state.previewStart == null ? s.headerRow + 1 : state.previewStart;
+    var end = Math.min(s.rows.length, start + PREVIEW_ROWS);
+
+    var table = el('table', { class: 'sheet' });
+    var head = el('tr', {}, [el('th', { text: '' })]);
+    for (var c = 0; c < width; c++) head.appendChild(el('th', { text: W.columnLetter(c + 1) }));
+    table.appendChild(el('thead', {}, [head]));
+    var body = el('tbody');
+    var rowsToShow = [];
+    for (var h = 0; h <= s.headerRow; h++) rowsToShow.push(h);
+    for (var r = start; r < end; r++) rowsToShow.push(r);
+    var kinds = W.classifyRows(s.rows, s.headerRow);
+    rowsToShow.forEach(function (r) {
+      var kind = r > s.headerRow ? kinds[r - s.headerRow - 1] : '';
+      var tr = el('tr', { class: r === s.headerRow ? 'hdr' : (kind === 'total' || kind === 'subtotal' ? 'tot' : kind === 'note' ? 'note-row' : ''),
+        title: kind === 'total' || kind === 'subtotal' ? 'Total row: not checked as data' : kind === 'note' ? 'Note row: not checked as data' : false }, [el('th', { text: r + 1 })]);
+      for (var c = 0; c < width; c++) {
+        var v = s.rows[r][c];
+        var k = r + ',' + c, m = marks[k];
+        var cls = (typeof v === 'number' ? 'num ' : '') + (m ? m.sev + ' ' : '') + (state.flash === k ? 'flash' : '');
+        tr.appendChild(el('td', { class: cls.trim(), 'data-k': k, title: m ? m.msgs.join('\n') : false, text: v === '' || v == null ? '' : E.display(v) }));
+      }
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+
+    var dataRows = kinds.filter(function (k) { return k === 'data'; }).length;
+    var skipped = kinds.filter(function (k) { return k === 'total' || k === 'subtotal' || k === 'note'; }).length;
+    foot.appendChild(el('span', { text: 'Rows ' + (start + 1) + '–' + end + ' of ' + s.rows.length + ' (' + plural(Math.max(0, dataRows), 'data row') + (skipped ? ', ' + plural(skipped, 'total or note row') + ' not checked as data' : '') + '). Colored cells have problems; hover for details.' }));
+    if (start > s.headerRow + 1) foot.appendChild(el('button', { type: 'button', class: 'btn', text: 'Previous ' + PREVIEW_ROWS, onclick: function () { state.previewStart = Math.max(s.headerRow + 1, start - PREVIEW_ROWS); renderPreview(); } }));
+    if (end < s.rows.length) foot.appendChild(el('button', { type: 'button', class: 'btn', text: 'Next ' + PREVIEW_ROWS, onclick: function () { state.previewStart = end; renderPreview(); } }));
+  }
+
+  function renderDownloads() {
+    var none = downloads === null;
+    $('dlXlsx').disabled = none; $('dlCsv').disabled = none;
+    if (none) $('dlHint').textContent = 'Downloads are not available in this view. Open the page in the Claude app or a browser to save the marked-up workbook.';
+  }
+
+  // ---------------------------------------------------------------------------
+  // adding rules
+  // ---------------------------------------------------------------------------
+  function status(ok, text) { var s = $('ruleStatus'); s.hidden = false; s.className = 'status ' + (ok ? 'ok' : 'bad'); s.textContent = text; }
+
+  function describeAdded(rs) {
+    return rs.map(function (r) { return (r.column || 'sheet') + ' → ' + r.check + (r.param ? ' ' + r.param : ''); }).join('; ');
+  }
+
+  function addFromText() {
+    var text = $('ruleText').value.trim();
+    var s = sheet();
+    if (!text || !s) return;
+    var btn = $('addRule');
+    var local = function (note) {
+      var r = E.parseRuleText(text, headers(s).filter(Boolean));
+      if (!r) {
+        status(false, (note ? note + ' ' : '') + 'Could not turn that into a rule. Use a column name exactly as it appears in the header, for example "' + (exampleSentences(headers(s).filter(Boolean))[0] || 'Amount must not be negative') + '", or build the rule by hand below.');
+        return;
+      }
+      r.sheet = s.name; r.enabled = true;
+      state.rules.push(r);
+      $('ruleText').value = '';
+      status(true, (note ? note + ' ' : '') + 'Added: ' + describeAdded([r]));
+      run();
+    };
+    if (!sample || !$('useClaude').checked) return local();
+
+    btn.disabled = true; btn.textContent = 'Reading…';
+    var hb = headersBySheet();
+    var prompt = [
+      'You translate data-quality requirements written by business users (English or German) into rules for a spreadsheet checker.',
+      'Available checks (name [scope] param — meaning):',
+      E.checkList().map(function (c) { return '- ' + c.name + ' [' + c.scope + '] param: ' + (c.param || 'none') + ' — ' + c.help; }).join('\n'),
+      '', 'Sheets and their columns:',
+      Object.keys(hb).map(function (n) { return '- "' + n + '": ' + hb[n].map(function (h) { return '"' + h + '"'; }).join(', '); }).join('\n'),
+      '', 'The user is looking at sheet "' + s.name + '"; prefer it when the sheet is not named.',
+      'Use only the checks above and sheet/column names exactly as listed. One sentence may need several rules. For min_rows leave column empty.',
+      'severity is "warning" only if the user says warn/should/hint, else "error". description: a short restatement of that one rule in the user\'s language.',
+      'Reply with JSON only: {"rules":[{"sheet":"","column":"","check":"","param":"","severity":"error","description":""}],"unclear":""}',
+      '', 'Requirement: ' + text
+    ].join('\n');
+    sample.json(prompt, { modelTier: 'quick' }).then(function (out) {
+      var rs = E.validateRules(out && out.rules || [], hb);
+      if (!rs.length) return local(out && out.unclear ? 'Claude: ' + out.unclear : '');
+      rs.forEach(function (r) { r.enabled = true; state.rules.push(r); });
+      $('ruleText').value = '';
+      status(true, 'Added ' + plural(rs.length, 'rule') + ': ' + describeAdded(rs));
+      run();
+    }).catch(function (e) {
+      if (e && e.code === 'not_granted') { sample = null; $('claudeToggle').hidden = true; }
+      local(e && e.code === 'rate_limited' ? 'Claude is busy, used the built-in reader.' : '');
+    }).then(function () { btn.disabled = false; btn.textContent = 'Add rule'; });
+  }
+
+  function fillChecks() {
+    var sel = $('bCheck');
+    E.checkList().forEach(function (c) { sel.appendChild(el('option', { value: c.name, text: c.name.replace(/_/g, ' ') })); });
+    var upd = function () {
+      var c = E.CHECKS[sel.value];
+      $('bParam').disabled = !c.param; $('bParam').placeholder = c.param || 'No parameter needed';
+      $('bHelp').textContent = c.help;
+      $('bColumn').disabled = c.scope === 'table';
+    };
+    sel.addEventListener('change', upd); upd();
+  }
+
+  function addManual() {
+    var s = sheet(); if (!s) return;
+    var check = $('bCheck').value, def = E.CHECKS[check];
+    var r = { sheet: s.name, column: def.scope === 'table' ? '' : $('bColumn').value, check: check,
+      param: def.param ? $('bParam').value.trim() : '', severity: $('bSeverity').value, description: '', enabled: true };
+    if (def.param && !r.param && check !== 'unique') { status(false, 'This check needs a parameter: ' + def.param + '.'); return; }
+    state.rules.push(r);
+    $('bParam').value = '';
+    status(true, 'Added: ' + describeAdded([r]));
+    run();
+  }
+
+  // ---------------------------------------------------------------------------
+  // downloads
+  // ---------------------------------------------------------------------------
+  function getDownloads() {
+    if (downloads !== undefined) return Promise.resolve(downloads);
+    if (!window.claude || typeof window.claude.use !== 'function') { downloads = 'local'; return Promise.resolve(downloads); }
+    return window.claude.use('downloads').then(function (d) { downloads = d || null; renderDownloads(); return downloads; }, function () { downloads = null; renderDownloads(); return null; });
+  }
+
+  function save(filename, data, type) {
+    return getDownloads().then(function (d) {
+      if (!d) return;
+      if (d === 'local') {
+        var url = URL.createObjectURL(new Blob([data], { type: type }));
+        var a = el('a', { href: url, download: filename });
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        return;
+      }
+      return d.save({ filename: filename, data: new Blob([data], { type: type }) }).catch(function (e) {
+        if (e && e.code === 'declined') return;
+        $('dlHint').textContent = e && e.code === 'rate_limited' ? 'A save prompt is already open.' : 'The file could not be saved here (' + (e && e.code || 'error') + ').';
+      });
+    });
+  }
+
+  function baseName() { return (state.file.sample ? 'sample-payouts' : state.file.name.replace(/\.[^.]+$/, '')) + '-plausi'; }
+
+  $('dlXlsx').addEventListener('click', function () {
+    var bytes = W.buildReport({ sheets: state.sheets }, state.rules, state.result.issues);
+    save(baseName() + '.xlsx', bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  });
+  $('dlCsv').addEventListener('click', function () {
+    save(baseName() + '-report.csv', W.reportCsv(state.result.issues), 'text/csv;charset=utf-8');
+  });
+
+  // ---------------------------------------------------------------------------
+  // events
+  // ---------------------------------------------------------------------------
+  $('fileInput').addEventListener('change', function () { if (this.files[0]) openFile(this.files[0]); this.value = ''; });
+  $('sheetSelect').addEventListener('change', function () { state.current = +this.value; state.previewStart = null; state.flash = null; render(); });
+  $('headerRow').addEventListener('change', function () {
+    var s = sheet(); var v = Math.round(+this.value) - 1;
+    if (!s || isNaN(v)) return;
+    s.headerRow = Math.max(0, Math.min(s.rows.length - 1, v)); state.previewStart = null; run();
+  });
+  $('addRule').addEventListener('click', addFromText);
+  $('ruleText').addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addFromText(); });
+  $('bAdd').addEventListener('click', addManual);
+  $('suggestBtn').addEventListener('click', function () {
+    var s = sheet(); if (!s) return;
+    var have = {};
+    state.rules.forEach(function (r) { have[[r.sheet, r.column, r.check, r.param].join('|')] = true; });
+    var fresh = W.suggestForSheet(s.name, s.rows, s.headerRow || 0).filter(function (r) { return !have[[r.sheet, r.column, r.check, r.param].join('|')]; });
+    fresh.forEach(function (r) { state.rules.push(r); });
+    status(!!fresh.length, fresh.length ? 'Added ' + plural(fresh.length, 'suggested rule') + ' for ' + s.name + '.' : 'No new suggestions for this sheet. Describe a rule instead.');
+    run();
+  });
+
+  var dragDepth = 0;
+  window.addEventListener('dragenter', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') > -1) { dragDepth++; $('dropzone').hidden = false; } });
+  window.addEventListener('dragleave', function () { if (--dragDepth <= 0) { dragDepth = 0; $('dropzone').hidden = true; } });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) {
+    e.preventDefault(); dragDepth = 0; $('dropzone').hidden = true;
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) openFile(f);
+  });
+
+  fillChecks();
+  loadSample();
+
+  // Hooks for the browser extension (tables from web pages, files from links).
+  window.PlausiApp = {
+    openFile: openFile,
+    loadSheets: loadSheets,
+    showProblem: function (msg) { showProblem(msg); }
+  };
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('sample').then(function (s) { if (s) { sample = s; $('claudeToggle').hidden = false; } }, function () {});
+    getDownloads();
+  } else {
+    downloads = 'local';
+  }
+})();
+
+</script>
+</body></html>

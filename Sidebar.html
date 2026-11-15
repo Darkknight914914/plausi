@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  :root { --ink:#1f2933; --muted:#616e7c; --line:#e4e7eb; --accent:#1a5fb4; --err:#c62828; --errbg:#fdecea; --warn:#a15c00; --warnbg:#fff7e0; --ok:#1b7f3b; }
+  * { box-sizing: border-box; }
+  body { font: 13px/1.45 "Google Sans", Roboto, Arial, sans-serif; color: var(--ink); margin: 0; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 2; }
+  .tab { flex: 1; padding: 10px 0; text-align: center; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 500; }
+  .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .pane { display: none; padding: 14px; }
+  .pane.on { display: block; }
+  button { font: inherit; border-radius: 6px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); width: 100%; padding: 9px; font-weight: 500; }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row > * { flex: 1; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px; text-align: center; }
+  .stat b { display: block; font-size: 20px; }
+  .stat.e b { color: var(--err); } .stat.w b { color: var(--warn); } .stat.ok b { color: var(--ok); }
+  .issue { border: 1px solid var(--line); border-left: 4px solid var(--err); border-radius: 6px; padding: 7px 9px; margin-bottom: 6px; cursor: pointer; }
+  .issue.warning { border-left-color: #f0a400; }
+  .issue.config { border-left-color: #7b1fa2; }
+  .issue:hover { background: #f5f7fa; }
+  .issue .where { font-size: 11px; color: var(--muted); }
+  .issue .val { font-family: monospace; font-size: 11px; background: #f5f7fa; padding: 0 3px; border-radius: 3px; word-break: break-all; }
+  textarea, input[type=text], input[type=password], select { width: 100%; font: inherit; padding: 7px; border: 1px solid var(--line); border-radius: 6px; }
+  textarea { min-height: 64px; resize: vertical; }
+  label { display: block; font-weight: 500; margin: 12px 0 4px; }
+  .check { display: flex; gap: 6px; align-items: center; margin-top: 8px; font-weight: 400; }
+  .msg { margin-top: 8px; padding: 8px; border-radius: 6px; display: none; }
+  .msg.ok { display: block; background: #e8f5ec; color: var(--ok); }
+  .msg.bad { display: block; background: var(--errbg); color: var(--err); }
+  details { border-top: 1px solid var(--line); padding: 6px 0; }
+  summary { cursor: pointer; font-weight: 500; }
+  .chips span { display: inline-block; background: #eef2f7; border-radius: 10px; padding: 1px 8px; margin: 2px; font-size: 11px; cursor: pointer; }
+  h3 { margin: 4px 0 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="tabs">
+  <div class="tab on" data-p="check">Check</div>
+  <div class="tab" data-p="rules">Rules</div>
+  <div class="tab" data-p="settings">Alerts</div>
+</div>
+
+<div class="pane on" id="check">
+  <button class="primary" id="runBtn">Run checks</button>
+  <div class="muted" id="lastRun" style="margin-top:6px"></div>
+  <div id="empty" style="display:none; margin-top:12px">
+    <p>No rules yet. Describe one in the <b>Rules</b> tab, or try the demo:</p>
+    <button id="demoBtn">Load demo payouts data</button>
+  </div>
+  <div id="results"></div>
+</div>
+
+<div class="pane" id="rules">
+  <h3>Describe a rule</h3>
+  <div class="muted">Plain English or German. Use your column names.</div>
+  <textarea id="ruleText" placeholder="e.g. IBAN must be valid&#10;End date must be on or after Start date&#10;Currency must be one of EUR, USD, GBP"></textarea>
+  <div class="chips muted" id="examples">Try:
+    <span>Payout ID must be unique</span><span>Amount must not be negative</span><span>Warn if Customer names look similar</span><span>Summe von Amount muss Bank!B2 entsprechen</span>
+  </div>
+  <div class="row"><button class="primary" id="addBtn">Add rule</button></div>
+  <div class="msg" id="ruleMsg"></div>
+  <div class="row"><button id="openRules">Open rules sheet</button><button id="openReport">Open report</button></div>
+  <p class="muted" id="ruleCount"></p>
+  <details><summary>All check types</summary><div id="checkHelp" class="muted"></div></details>
+</div>
+
+<div class="pane" id="settings">
+  <h3>Scheduled checks</h3>
+  <select id="schedule">
+    <option value="off">Off (run manually)</option>
+    <option value="hourly">Every hour</option>
+    <option value="daily">Every day at 07:00</option>
+    <option value="weekly">Every Monday at 07:00</option>
+  </select>
+  <div class="muted">Only <b>new</b> problems trigger an alert.</div>
+
+  <label class="check"><input type="checkbox" id="emailAlerts"> E-mail me</label>
+  <label class="check"><input type="checkbox" id="alertWarnings"> Also alert on warnings</label>
+
+  <label for="slackWebhook">Slack incoming webhook</label>
+  <input type="text" id="slackWebhook" placeholder="https://hooks.slack.com/services/…">
+
+  <label for="jiraWebhook">Jira Automation webhook</label>
+  <input type="text" id="jiraWebhook" placeholder="https://api-private.atlassian.com/automation/webhooks/…">
+  <div class="muted">In Jira: Automation → trigger "Incoming webhook" → action "Create issue" with summary <code>{{webhookData.summary}}</code>.</div>
+
+  <h3 style="margin-top:16px">Claude (optional)</h3>
+  <div class="muted">Understands far more rule phrasings. Only your sentence and column names are sent — never cell values.</div>
+  <label for="apiKey">Anthropic API key <span class="muted" id="keyState"></span></label>
+  <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off">
+  <label for="model">Model</label>
+  <input type="text" id="model">
+
+  <div class="row"><button class="primary" id="saveBtn">Save</button></div>
+  <div class="row"><button id="testBtn">Send test alert</button><button id="clearKey">Remove API key</button></div>
+  <div class="msg" id="setMsg"></div>
+</div>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var state = null;
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function msg(box, ok, text) { var m = $(box); m.className = 'msg ' + (ok ? 'ok' : 'bad'); m.textContent = text; }
+  function fail(box, btn) { return function (e) { if (btn) btn.disabled = false; msg(box, false, e.message || String(e)); }; }
+
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.onclick = function () {
+      document.querySelectorAll('.tab,.pane').forEach(function (x) { x.classList.remove('on'); });
+      t.classList.add('on'); $(t.dataset.p).classList.add('on');
+    };
+  });
+
+  function applyState(s) {
+    state = s;
+    $('empty').style.display = s.ruleCount ? 'none' : 'block';
+    $('ruleCount').textContent = s.ruleCount + ' active rule' + (s.ruleCount === 1 ? '' : 's') + (s.sheets.length ? ' · data sheets: ' + s.sheets.join(', ') : '');
+    $('lastRun').textContent = s.lastRun ? 'Last run ' + new Date(s.lastRun.at).toLocaleString() : '';
+    var st = s.settings;
+    $('schedule').value = st.schedule; $('emailAlerts').checked = st.emailAlerts; $('alertWarnings').checked = st.alertWarnings;
+    $('slackWebhook').value = st.slackWebhook; $('jiraWebhook').value = st.jiraWebhook; $('model').value = st.model;
+    $('keyState').textContent = st.hasApiKey ? '(saved ✓)' : '(not set)';
+    var help = $('checkHelp'); help.innerHTML = '';
+    s.checks.forEach(function (c) {
+      var p = el('p'); p.appendChild(el('b', '', c.name)); p.appendChild(document.createTextNode(' — ' + c.help + (c.param ? ' Parameter: ' + c.param : '')));
+      help.appendChild(p);
+    });
+  }
+
+  function showResults(r) {
+    var box = $('results'); box.innerHTML = '';
+    if (r.noRules) { $('empty').style.display = 'block'; return; }
+    var st = r.stats, stats = el('div', 'stats');
+    [['e', st.errors, 'errors'], ['w', st.warnings, 'warnings'], [st.errors + st.warnings ? '' : 'ok', st.rows, 'rows checked']].forEach(function (x) {
+      var d = el('div', 'stat ' + x[0]); d.appendChild(el('b', '', x[1])); d.appendChild(document.createTextNode(x[2])); stats.appendChild(d);
+    });
+    box.appendChild(stats);
+    if (st.config) box.appendChild(el('p', 'muted', st.config + ' rule(s) need fixing — shown first in purple.'));
+    if (!r.total) { box.appendChild(el('p', '', 'No problems found. 🎉')); return; }
+    r.issues.forEach(function (i) {
+      var d = el('div', 'issue ' + i.severity);
+      d.appendChild(el('div', 'where', i.sheet + (i.row ? ' · row ' + i.row : '') + (i.column ? ' · ' + i.column : '')));
+      d.appendChild(el('div', '', i.message));
+      if (i.value !== '') { var v = el('div', 'where'); v.appendChild(el('span', 'val', i.value)); d.appendChild(v); }
+      d.title = 'Rule: ' + i.rule;
+      if (i.row) d.onclick = function () { google.script.run.sidebarGoTo(i.sheet, i.row, i.colIndex); };
+      box.appendChild(d);
+    });
+    if (r.total > r.issues.length) box.appendChild(el('p', 'muted', '… ' + (r.total - r.issues.length) + ' more in the Plausi Report sheet.'));
+  }
+
+  $('runBtn').onclick = function () {
+    var b = this; b.disabled = true; b.textContent = 'Checking…';
+    google.script.run.withSuccessHandler(function (r) {
+      b.disabled = false; b.textContent = 'Run checks'; showResults(r);
+      $('lastRun').textContent = 'Last run just now · full list in the "Plausi Report" sheet';
+    }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Run checks'; $('results').textContent = e.message; }).sidebarRun();
+  };
+
+  $('demoBtn').onclick = function () {
+    var b = this; b.disabled = true;
+    google.script.run.withSuccessHandler(function (s) { b.disabled = false; applyState(s); $('runBtn').click(); })
+      .withFailureHandler(function (e) { b.disabled = false; $('results').textContent = e.message; }).sidebarLoadDemo();
+  };
+
+  document.querySelectorAll('#examples span').forEach(function (s) { s.onclick = function () { $('ruleText').value = s.textContent; }; });
+
+  $('addBtn').onclick = function () {
+    var text = $('ruleText').value.trim(); if (!text) return;
+    var b = this; b.disabled = true;
+    google.script.run.withSuccessHandler(function (r) {
+      b.disabled = false;
+      if (!r.added) { msg('ruleMsg', false, r.message + (r.aiError ? ' (Claude: ' + r.aiError + ')' : '')); return; }
+      var what = r.rules.map(function (x) { return x.check + ' on ' + (x.column || x.sheet) + (x.param ? ' (' + x.param + ')' : ''); }).join('; ');
+      msg('ruleMsg', true, 'Added ' + r.added + ' rule' + (r.added > 1 ? 's' : '') + (r.source === 'claude' ? ' with Claude' : '') + ': ' + what + (r.aiError ? ' — Claude failed, used offline parser.' : ''));
+      $('ruleText').value = '';
+      google.script.run.withSuccessHandler(applyState).sidebarState();
+    }).withFailureHandler(fail('ruleMsg', b)).sidebarAddRule(text);
+  };
+
+  $('openRules').onclick = function () { google.script.run.sidebarOpenSheet('rules'); };
+  $('openReport').onclick = function () { google.script.run.sidebarOpenSheet('report'); };
+
+  function settingsPayload(extra) {
+    var s = { schedule: $('schedule').value, emailAlerts: $('emailAlerts').checked, alertWarnings: $('alertWarnings').checked,
+      slackWebhook: $('slackWebhook').value, jiraWebhook: $('jiraWebhook').value, model: $('model').value, apiKey: $('apiKey').value };
+    for (var k in extra) s[k] = extra[k];
+    return s;
+  }
+  function save(extra, okText) {
+    var b = $('saveBtn'); b.disabled = true;
+    google.script.run.withSuccessHandler(function (st) {
+      b.disabled = false; $('apiKey').value = ''; state.settings = st; applyState(state); msg('setMsg', true, okText);
+    }).withFailureHandler(fail('setMsg', b)).sidebarSaveSettings(settingsPayload(extra));
+  }
+  $('saveBtn').onclick = function () { save({}, 'Saved.'); };
+  $('clearKey').onclick = function () { save({ clearApiKey: true, apiKey: '' }, 'API key removed.'); };
+  $('testBtn').onclick = function () {
+    var b = this; b.disabled = true;
+    google.script.run.withSuccessHandler(function (r) {
+      b.disabled = false;
+      msg('setMsg', !!r.sent.length, r.sent.length ? 'Test sent via ' + r.sent.join(', ') + '.' : 'Nothing to send to — save an e-mail, Slack or Jira setting first.');
+    }).withFailureHandler(fail('setMsg', b)).sidebarTestAlert();
+  };
+
+  google.script.run.withSuccessHandler(applyState).sidebarState();
+</script>
+</body>
+</html>

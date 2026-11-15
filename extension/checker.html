@@ -1,0 +1,286 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}[hidden]{display:none!important}</style></head><body><title>Plausi Checker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working desk — rules on the left, findings and the sheet itself on the right, like a reviewer's checklist next to the ledger. */
+:root {
+  --paper: #f3f5f8;
+  --surface: #ffffff;
+  --sunken: #eef1f5;
+  --ink: #16202c;
+  --muted: #586579;
+  --line: #d9dfe7;
+  --accent: #1f5f99;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2ecf6;
+  --err: #b42318;
+  --err-bg: #fde7e4;
+  --warn: #8a5300;
+  --warn-bg: #fff1cc;
+  --cfg: #6b3fa0;
+  --cfg-bg: #efe6f8;
+  --ok: #1d7a46;
+  --ok-bg: #e2f4ea;
+  --focus: #f4b400;
+  --f-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f141b; --surface: #161d27; --sunken: #1c2531; --ink: #e5eaf1; --muted: #9aa7b8; --line: #2a3544;
+    --accent: #6aa6e0; --accent-ink: #0b1220; --accent-soft: #1b2e44;
+    --err: #ff8a7a; --err-bg: #3a1b18; --warn: #f2c04d; --warn-bg: #352a10; --cfg: #c9a3f0; --cfg-bg: #2c2140;
+    --ok: #6fd39b; --ok-bg: #163324; --focus: #f4b400; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f141b; --surface: #161d27; --sunken: #1c2531; --ink: #e5eaf1; --muted: #9aa7b8; --line: #2a3544;
+  --accent: #6aa6e0; --accent-ink: #0b1220; --accent-soft: #1b2e44;
+  --err: #ff8a7a; --err-bg: #3a1b18; --warn: #f2c04d; --warn-bg: #352a10; --cfg: #c9a3f0; --cfg-bg: #2c2140;
+  --ok: #6fd39b; --ok-bg: #163324; --focus: #f4b400; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--f-ui); }
+.wrap { max-width: 1320px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-size: 0.86em; }
+.muted { color: var(--muted); }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+/* top bar */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-size: 14px; }
+.file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.file .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34ch; }
+.badge { font: 500 11px/1 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 7px; border-radius: 4px; background: var(--sunken); color: var(--muted); border: 1px solid var(--line); }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 8px 14px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { background: var(--sunken); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+
+.note { margin-top: 16px; border: 1px dashed var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; color: var(--muted); font-size: 14px; background: var(--surface); }
+.note b { color: var(--ink); }
+.formats { display: flex; flex-wrap: wrap; gap: 4px; }
+.formats span { font: 500 11px/1 var(--f-mono); padding: 4px 6px; border-radius: 4px; background: var(--sunken); color: var(--muted); }
+.note.sample { border-style: solid; border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.note.problem { border-style: solid; border-color: var(--err); background: var(--err-bg); color: var(--ink); }
+
+/* drag overlay */
+.dropzone { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: color-mix(in srgb, var(--paper) 86%, transparent); border: 3px dashed var(--accent); font-size: 20px; font-weight: 600; }
+
+/* layout */
+.layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 20px; padding-block: 20px 40px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } .results { order: -1; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel > header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.panel > header h2 { font-size: 16px; font-weight: 600; }
+.panel .body { padding: 14px 16px; display: grid; gap: 14px; }
+.eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; }
+select, input[type=text], input[type=number], textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--surface); }
+textarea { min-height: 70px; resize: vertical; }
+.hint { font-size: 13px; color: var(--muted); }
+.examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.examples button { border: 1px solid var(--line); background: var(--sunken); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer; }
+.examples button:hover { border-color: var(--accent); }
+.status { font-size: 13px; padding: 8px 10px; border-radius: 6px; }
+.status.ok { background: var(--ok-bg); color: var(--ok); }
+.status.bad { background: var(--err-bg); color: var(--err); }
+.toggle { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+details.builder { border-top: 1px solid var(--line); padding-top: 12px; }
+details.builder summary { cursor: pointer; font-weight: 500; font-size: 14px; }
+details.builder .grid { display: grid; gap: 10px; margin-top: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+details.builder .grid .wide { grid-column: 1 / -1; }
+
+.rules { list-style: none; margin: 0; padding: 0; display: grid; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+.rule:first-child { border-top: 0; }
+.rule .what { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; min-width: 0; }
+.rule .col { font-weight: 600; overflow-wrap: anywhere; }
+.chip { font: 500 11.5px/1.2 var(--f-mono); padding: 3px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.rule .param { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.rule .desc { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.rule.off { opacity: .5; }
+.rule .acts { display: flex; gap: 4px; align-items: start; }
+.icon-btn { border: 1px solid transparent; background: none; border-radius: 6px; padding: 3px 6px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.icon-btn:hover { border-color: var(--line); color: var(--ink); }
+.sev { font: 600 11px/1 var(--f-ui); letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 4px 6px; border: 0; cursor: pointer; }
+.sev.error { background: var(--err-bg); color: var(--err); }
+.sev.warning { background: var(--warn-bg); color: var(--warn); }
+.empty-rules { color: var(--muted); font-size: 14px; padding-top: 6px; }
+.list-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.sugg { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: var(--ok-bg); border-radius: 4px; padding: 2px 6px; }
+
+/* summary */
+.results { display: grid; gap: 20px; min-width: 0; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; border-top: 3px solid var(--line); }
+.tile b { display: block; font-size: 28px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 13px; color: var(--muted); }
+.tile.e { border-top-color: var(--err); } .tile.e b { color: var(--err); }
+.tile.w { border-top-color: var(--warn); } .tile.w b { color: var(--warn); }
+.tile.c { border-top-color: var(--cfg); } .tile.c b { color: var(--cfg); }
+.tile.ok { border-top-color: var(--ok); } .tile.ok b { color: var(--ok); }
+
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.dl { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.issues { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow: auto; }
+.issue { display: grid; grid-template-columns: 6px 88px minmax(0, 1fr); gap: 0 12px; padding: 10px 16px 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.issue:hover, .issue:focus-visible { background: var(--sunken); }
+.issue .stripe { background: var(--err); border-radius: 0 3px 3px 0; }
+.issue.warning .stripe { background: var(--warn); }
+.issue.config .stripe { background: var(--cfg); }
+.issue .ref { font: 500 13px/1.4 var(--f-mono); color: var(--accent); overflow-wrap: anywhere; }
+.issue .ref small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+.issue .msg { font-weight: 500; }
+.issue .meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.issue .val { font-family: var(--f-mono); font-size: 12px; background: var(--sunken); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; color: var(--ink); }
+.more { padding: 12px 16px; }
+.clean { padding: 28px 16px; text-align: center; color: var(--ok); font-weight: 600; }
+
+/* sheet preview */
+.preview-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { border: 1px solid var(--line); border-bottom-width: 3px; background: var(--surface); padding: 5px 12px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 13px; }
+.tabs button[aria-selected="true"] { border-bottom-color: var(--accent); font-weight: 600; }
+.tabs .cnt { font-variant-numeric: tabular-nums; color: var(--err); margin-left: 4px; font-weight: 600; }
+.grid-wrap { overflow: auto; max-height: 520px; }
+table.sheet { border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.sheet th, table.sheet td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 8px; white-space: nowrap; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+table.sheet thead th { position: sticky; top: 0; z-index: 2; background: var(--sunken); font: 500 11px/1.4 var(--f-mono); color: var(--muted); text-align: center; }
+table.sheet tbody th { position: sticky; left: 0; z-index: 1; background: var(--sunken); font: 500 11px/1.4 var(--f-mono); color: var(--muted); text-align: right; min-width: 44px; }
+table.sheet tr.hdr td { font-weight: 600; background: var(--accent-soft); }
+table.sheet td.num { text-align: right; }
+table.sheet tr.tot td { font-weight: 600; background: var(--sunken); border-top: 2px solid var(--muted); }
+table.sheet tr.note-row td { color: var(--muted); font-style: italic; }
+table.sheet td.e { background: var(--err-bg); color: var(--err); box-shadow: inset 0 0 0 1px var(--err); }
+table.sheet td.w { background: var(--warn-bg); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn); }
+table.sheet td.flash { outline: 3px solid var(--focus); outline-offset: -3px; }
+.preview-foot { padding: 10px 16px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+footer.foot { padding-block: 0 32px; color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { table.sheet td.flash { transition: outline-color .6s; } }
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Plausi<span>.</span></h1>
+      <p>Business-rule checks for Excel and CSV files</p>
+    </div>
+    <div class="file">
+      <span class="badge" id="fileFormat">XLSX</span>
+      <span class="name" id="fileName">Sample payouts</span>
+    </div>
+    <label class="btn primary" for="fileInput">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg>
+      Open file
+    </label>
+    <input type="file" id="fileInput" hidden accept=".xlsx,.xlsm,.xlsb,.xls,.xltx,.xltm,.xlt,.ods,.fods,.csv,.tsv,.txt">
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="note" id="banner"></div>
+
+  <div class="layout">
+    <!-- Rules -->
+    <section class="panel" aria-labelledby="rulesTitle">
+      <header><h2 id="rulesTitle">Rules</h2><span class="muted" id="ruleCount"></span></header>
+      <div class="body">
+        <div class="row2">
+          <div class="field">
+            <label for="sheetSelect">Sheet</label>
+            <select id="sheetSelect"></select>
+          </div>
+          <div class="field">
+            <label for="headerRow">Header row</label>
+            <input type="number" id="headerRow" min="1" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="ruleText">Describe a rule</label>
+          <textarea id="ruleText" placeholder="IBAN must be valid"></textarea>
+          <div class="examples" id="examples"></div>
+          <label class="toggle" id="claudeToggle" hidden><input type="checkbox" id="useClaude" checked> Let Claude read it (sends the sentence and column names, never cell values)</label>
+          <button class="btn primary" id="addRule" type="button">Add rule</button>
+          <div class="status" id="ruleStatus" hidden></div>
+        </div>
+
+        <details class="builder">
+          <summary>Build a rule by hand</summary>
+          <div class="grid">
+            <div class="field"><label for="bColumn">Column</label><select id="bColumn"></select></div>
+            <div class="field"><label for="bCheck">Check</label><select id="bCheck"></select></div>
+            <div class="field wide"><label for="bParam">Parameter</label><input type="text" id="bParam"><span class="hint" id="bHelp"></span></div>
+            <div class="field"><label for="bSeverity">Severity</label><select id="bSeverity"><option value="error">Error</option><option value="warning">Warning</option></select></div>
+            <div class="field" style="align-self:end"><button class="btn" id="bAdd" type="button">Add</button></div>
+          </div>
+        </details>
+
+        <div>
+          <div class="list-head"><span class="eyebrow">Active on this sheet</span><button class="btn small" id="suggestBtn" type="button">Suggest rules from my data</button></div>
+          <ul class="rules" id="ruleList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <div class="results">
+      <div class="summary" id="summary"></div>
+
+      <section class="panel" aria-labelledby="findingsTitle">
+        <div class="bar">
+          <h2 id="findingsTitle" style="font-size:16px;font-weight:600">Findings</h2>
+          <div class="filters" id="filters"></div>
+        </div>
+        <ul class="issues" id="issues"></ul>
+        <div class="bar" style="border-bottom:0;border-top:1px solid var(--line)">
+          <span class="hint" id="dlHint">Download a copy with problem cells colored, plus a report and your rules.</span>
+          <div class="dl">
+            <button class="btn" id="dlCsv" type="button">Report (.csv)</button>
+            <button class="btn primary" id="dlXlsx" type="button">Marked-up workbook (.xlsx)</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="previewTitle">
+        <div class="preview-head">
+          <h2 id="previewTitle" style="font-size:16px;font-weight:600">Sheet</h2>
+          <div class="tabs" id="tabs" role="tablist"></div>
+        </div>
+        <div class="grid-wrap" id="gridWrap"></div>
+        <div class="preview-foot" id="previewFoot"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="foot">Files are read in your browser and never uploaded. Works with .xlsx, .xlsm, .xlsb, .xls (Excel 97–2003), .ods and CSV/TSV. Rules travel with the downloaded workbook in a “Plausi Rules” sheet, the same format the Google Sheets add-on uses.</footer>
+</div>
+
+<div class="dropzone" id="dropzone" hidden>Drop your Excel or CSV file to check it</div>
+
+<script src="lib/xlsx.full.min.js"></script>
+<script src="plausi-core.js"></script>
+<script src="app.js"></script>
+<script src="bridge.js"></script>
+</body></html>
